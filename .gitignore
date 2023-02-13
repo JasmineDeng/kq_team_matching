@@ -1,2 +1,4 @@
 kq_env
 token.json
+__pycache__
+.mypy_cache
