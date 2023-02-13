@@ -61,12 +61,18 @@ def assign_players_to_teams(players: Set[Player]) -> Set[Team]:
     #  fills not a problem with the current test data
     assert len(queens) == total_teams, "fills not yet implemented for queen"
     print(f"Got queens: {queens}")
+
+    players = players.difference(queens)
+
     # Next, select speed warriors. We want all the ranking scores to be approximately the same after this step,
     # since if the queen is weaker we should compensate with a stronger speed warrior.
     speed_warriors = _select_player_role(players, total_teams, PlayerRole.SPEED)
     # TODO what do we do if there are fills?
     assert len(speed_warriors) == total_teams, "fills not yet implemented for speed warriors"
     print(f"Got speed warriors: {speed_warriors}")
+
+    # TODO make this more easily reusable
+    players = players.difference(speed_warriors)
 
     queens = sorted(list(queens), key=_sort_fn)
     speed_warriors = sorted(list(speed_warriors), key=_sort_fn, reverse=True)
