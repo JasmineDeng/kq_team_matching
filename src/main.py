@@ -36,6 +36,5 @@ def cli(file_path: str) -> None:
             print(f"Randomly chosen two fills: {subsample}")
 
 
-
 if __name__ == "__main__":
     cli()
