@@ -1,11 +1,11 @@
 import enum
-from typing import Dict, Set, NamedTuple
+from typing import List, Dict, Set, NamedTuple
 import logging
 
 logger = logging.getLogger(__file__)
 
 
-def _clip_value(value: int, min_value: int = 1, max_value: int = 5) -> int:
+def clip_value(value: int, min_value: int = 1, max_value: int = 5) -> int:
     return max(min_value, min(max_value, value))
 
 
@@ -64,15 +64,6 @@ class Player(BasePlayer):
         return str(self)
 
 
-class PlayerFill(BasePlayer):
-    def __init__(self, possible_roles: Set[PlayerRole]) -> None:
-        self._possible_roles = possible_roles
-
-    @property
-    def possible_roles(self) -> Set[PlayerRole]:
-        return self._possible_roles
-
-
 class BasePlayerAssignment:
     @property
     def score(self) -> int:
@@ -100,12 +91,54 @@ class PlayerAssignment(BasePlayerAssignment):
 
 
 class Team:
-    def __init__(self, players: Set[Player], fills: Set[PlayerFill]) -> None:
+    def __init__(self, players: List[PlayerAssignment]) -> None:
         self._players = players
-        self._fills = fills
-        if len(players) + len(fills) != 5:
-            raise ValueError(f"Players and fills, once summed, must sum to 5 players total, but got: {self._players} players, {self._fills} fills")
-        queens = [PlayerRole.QUEEN in p.possible_roles for p in self._players] + [PlayerRole.QUEEN in f.possible_roles for f in self._fills]
-        if len(queens) != 1:
-            raise ValueError(f"Exactly one player must have 'queen' as a possible role, got {queens}")
-        self._queen = queens[0]
+        self._queen = self._get_role(PlayerRole.QUEEN)
+        self._speed = self._get_role(PlayerRole.SPEED)
+        self._objective = self._get_role(PlayerRole.OBJECTIVE)
+
+        names = {self._queen.player.name, self._speed.player.name, self._objective.player.name}
+        self._other_players = [p for p in players if p.player.name not in names]
+        self._num_fills = 5 - len(players)
+        if len(players) > 5:
+            raise ValueError(f"Can't have more than 5 players on a team! Got: {len(players)}")
+
+    def _get_role(self, role: PlayerRole) -> PlayerAssignment:
+        players = [p for p in self._players if p.assigned_role == role]
+        if len(players) == 0:
+            raise ValueError(f"Expected to find at least one role {role} from players {self._players}")
+        return players[0]
+
+    @property
+    def total_score(self) -> int:
+        return sum([p.score for p in self._players])
+
+    @property
+    def num_fills(self) -> int:
+        return self._num_fills
+
+    @property
+    def needs_fill(self) -> bool:
+        return self._num_fills > 0
+
+    @property
+    def team_name(self) -> str:
+        return self._queen.player.name
+
+    def __str__(self) -> str:
+        role_to_print = {
+            PlayerRole.QUEEN: "Queen",
+            PlayerRole.SPEED: "Speed",
+            PlayerRole.OBJECTIVE: "Obj  ",
+            PlayerRole.VANILLA: "Vanil",
+        }
+        to_return = ""
+        for p in [self._queen, self._speed, self._objective, *self._other_players]:
+            to_return += f"{role_to_print[p.assigned_role]}: {p.player.name}, {p.score}\n"
+        if self._num_fills > 0:
+            to_return += f"Fills: {self._num_fills}\n"
+        to_return += f"Total score: {self.total_score}\n"
+        return to_return
+
+    def __repr__(self) -> str:
+        return str(self)

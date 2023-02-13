@@ -5,6 +5,7 @@ from data_types import Player, PlayerRanking, PlayerRole
 
 def load_data(csv_path: str) -> Set[Player]:
     players = set()
+    all_names = set()
     with open(csv_path, newline='') as csvfile:
         reader = csv.DictReader(csvfile)
         for row in reader:
@@ -17,6 +18,10 @@ def load_data(csv_path: str) -> Set[Player]:
             ranking = PlayerRanking(primary_role=primary_role, primary_ranking=primary_rank, secondary_role=secondary_role, secondary_ranking=secondary_rank)
             player = Player(name=row["Name"], ranking=ranking)
             players.add(player)
+            all_names.add(player.name)
+
+    if len(all_names) != len(players):
+        raise ValueError(f"Got a duplicate player somewhere. Had {len(players)} players but {len(all_names)}")
     return players
 
 
