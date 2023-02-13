@@ -24,10 +24,19 @@ def _warrior_sort_fn(player: Player) -> Tuple[int, int, float]:
     return warrior_int, player.ranking.primary_ranking, random.random()
 
 
-def _remove_assignment_from_players(all_players: List[Player], to_remove: Set[PlayerAssignment]) -> List[Player]:
+def _remove_subset_from_players(all_players: List[Player], to_remove: List[PlayerAssignment]) -> List[Player]:
     to_remove_names = {p.player.name for p in to_remove}
     to_return = [p for p in all_players if p.name not in to_remove_names]
     return to_return
+
+
+def _should_find_fill(role: PlayerRole) -> bool:
+    """Return if we should find a fill for the team, given the role we are currently assigning.
+
+    Currently ONLY find fills if the role is vanilla - since this is the last role we assign for, it is the most
+    likely to require fills. Filling for roles, such as queen, would probably require more complicated logic.
+    """
+    return role == PlayerRole.VANILLA
 
 
 class _PlayerGroup(BasePlayerAssignment):
@@ -48,8 +57,12 @@ class _PlayerGroup(BasePlayerAssignment):
         return str(self)
 
 
-def _players_to_assignment(players: Set[Player], role: PlayerRole) -> List[PlayerAssignment]:
+def _players_to_assignment(players: List[Player], role: PlayerRole) -> List[PlayerAssignment]:
     return [PlayerAssignment(player=p, assigned_role=role) for p in players]
+
+
+def _players_to_primary_role_assignment(players: List[Player]) -> List[PlayerAssignment]:
+    return [PlayerAssignment(player=p, assigned_role=p.ranking.primary_role) for p in players]
 
 
 def _select_player_role(players: List[Player], num_required: int, role: PlayerRole) -> List[PlayerAssignment]:
@@ -66,13 +79,12 @@ def _select_player_role(players: List[Player], num_required: int, role: PlayerRo
     primary_players = [p for p in players if p.ranking.primary_role == role]
     secondary_players = [p for p in players if p.ranking.secondary_role == role]
     if len(primary_players) >= num_required:
-        return _players_to_assignment(set(random.sample(primary_players, num_required)), role)
+        return _players_to_assignment(random.sample(primary_players, num_required), role)
     if len(primary_players) + len(secondary_players) < num_required:
-        return _players_to_assignment(set(primary_players + secondary_players), role)
+        return _players_to_assignment(primary_players + secondary_players, role)
     num_required_secondary = num_required - len(primary_players)
     secondary_players_sample = random.sample(secondary_players, num_required_secondary)
-    selected_players_set = set(primary_players + secondary_players_sample)
-    return _players_to_assignment(selected_players_set, role)
+    return _players_to_assignment(primary_players + secondary_players_sample, role)
 
 
 def assign_players_to_teams(players: Set[Player]) -> List[Team]:
@@ -83,15 +95,24 @@ def assign_players_to_teams(players: Set[Player]) -> List[Team]:
     # after each step, the scores are ideally approximately the same.
     players_to_select = list(players)
     player_groups: Optional[List[_PlayerGroup]] = None
-    for player_role in [PlayerRole.QUEEN, PlayerRole.SPEED, PlayerRole.OBJECTIVE]:
+    for player_role in [PlayerRole.QUEEN, PlayerRole.SPEED, PlayerRole.OBJECTIVE, PlayerRole.VANILLA]:
         players_for_role = _select_player_role(players_to_select, total_teams, player_role)
         # TODO what do we do if there are fills? possibly: pick someone specific to be a fill, or pick most common
         #  score and anybody with that score can fill. or, average all queen scores and let anybody fill (has more
         #  variability). fills not a problem with the current test data
-        assert len(players_for_role) == total_teams, "fills not yet implemented for roles"
-        print(f"Got players for role {player_role}: {players_for_role}")
 
-        players_to_select = _remove_assignment_from_players(players_to_select, set(players_for_role))
+        players_to_select = _remove_subset_from_players(players_to_select, players_for_role)
+
+        if not _should_find_fill(player_role):
+            assert len(players_for_role) == total_teams, "fills not yet implemented for roles"
+        else:
+            # If fills are needed, find any random player remaining and assign them their primary role.
+            subsampled_players = random.sample(players_to_select, total_teams - len(players_for_role))
+            subsampled_assignment = _players_to_primary_role_assignment(subsampled_players)
+            players_for_role.extend(subsampled_assignment)
+            players_to_select = _remove_subset_from_players(players_to_select, subsampled_assignment)
+
+        print(f"Got players for role {player_role}: {players_for_role}")
 
         if player_groups is None:
             # If player groups are currently None, then initialize to the current players, sorted lowest->highest score
@@ -106,20 +127,13 @@ def assign_players_to_teams(players: Set[Player]) -> List[Team]:
             for ind, group in enumerate(player_groups):
                 group.players.append(players_for_role[ind])
 
-    # The last two players matter the least. We prefer assigning maximum 2 main objective runners per team, so try
-    # to sort the list such that a warrior position is sorted first, lowest->highest score
-    # If there are <5 primary warriors left, a team may have up to 3 objective runners.
-    players_to_select = sorted(players_to_select, key=_warrior_sort_fn)
-    # Extend the remaining required players by fills
-    # Do assignment by sorting so the teams are sorted high->low score
-    # The remaining players are sorted low->high. Assign the last half (who should be mostly primary warriors)
+    # The remaining players are what we can get.
+    remaining_players = sorted(_players_to_primary_role_assignment(players_to_select), key=_sort_fn)
     assert player_groups is not None
-    for i in range(2):
-        remaining_players = players_to_select[i * total_teams: (i + 1) * total_teams]
-        player_groups = sorted(player_groups, key=_sort_fn, reverse=True)
-        print([group.score for group in player_groups])
-        for ind, remaining_player in enumerate(remaining_players):
-            player_groups[ind].players.append(PlayerAssignment(remaining_player, assigned_role=remaining_player.ranking.primary_role))
+    player_groups = sorted(player_groups, key=_sort_fn, reverse=True)
+    print([group.score for group in player_groups])
+    for ind, assignment in enumerate(remaining_players):
+        player_groups[ind].players.append(assignment)
 
     teams = [Team(group.players) for group in player_groups]
     return teams
