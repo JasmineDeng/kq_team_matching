@@ -1,7 +1,7 @@
 import math
 from typing import List, Set
 
-from data_types import Player, PlayerRole, Team, clip_value
+from data_types import Player, PlayerAssignment, PlayerRole, Team, clip_value
 
 
 def find_fills(team: Team, all_players: Set[Player], ideal_score: float) -> List[str]:
@@ -19,8 +19,8 @@ def find_fills(team: Team, all_players: Set[Player], ideal_score: float) -> List
     possible_players = []
     for p in all_players:
         if p.ranking.primary_role == PlayerRole.QUEEN and p.ranking.secondary_ranking in scores_to_find:
-            possible_players.append(p)
+            possible_players.append(PlayerAssignment(player=p, assigned_role=p.ranking.secondary_role))
         if p.ranking.primary_role != PlayerRole.QUEEN and p.ranking.primary_ranking in scores_to_find:
-            possible_players.append(p)
+            possible_players.append(PlayerAssignment(player=p, assigned_role=p.ranking.primary_role))
 
-    return [f"{p.name} ({p.ranking.primary_ranking})" for p in possible_players]
+    return [f"{p.player.name} ({p.assigned_role.name[0]}) ({p.score})" for p in possible_players]
