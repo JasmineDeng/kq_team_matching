@@ -80,7 +80,7 @@ def assign_players_to_teams(players: Set[Player]) -> Set[Team]:
     tentative_assignment = sorted([_PlayerGroup(set(elem)) for elem in zip(queens, speed_warriors)], key=_sort_fn)
     print(tentative_assignment)
 
-    objective = sorted(_select_player_role(players, total_teams, PlayerRole.OBJECTIVE), key=_sort_fn)
+    objective = sorted(_select_player_role(players, total_teams, PlayerRole.OBJECTIVE), key=_sort_fn, reverse=True)
     assert len(speed_warriors) == total_teams, "fills not yet implemented for objective runners"
     print(f"Got objective runners: {objective}")
     for ind, obj in enumerate(objective):
