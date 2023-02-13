@@ -1,5 +1,6 @@
-from typing import Set
 import csv
+from typing import Set
+
 from data_types import Player, PlayerRanking, PlayerRole
 
 
