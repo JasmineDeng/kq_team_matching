@@ -11,6 +11,7 @@ def find_fills(team: Team, all_players: Set[Player], ideal_score: float) -> List
     their secondary role assigned.
     """
     score_diff = ideal_score - team.total_score
+    # Use a range for all the score differences to increase the chances of finding a fill.
     if float(score_diff).is_integer():
         scores_to_find = {score_diff, score_diff + 1, score_diff - 1}
     else:

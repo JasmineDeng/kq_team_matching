@@ -1,7 +1,10 @@
-from load_data import load_data
+import random
+
 import click
+
 from assignment import assign_players_to_teams
 from find_fills import find_fills
+from load_data import load_data
 
 
 @click.command()
@@ -29,6 +32,9 @@ def cli(file_path: str) -> None:
         if t.needs_fill:
             possible_fills = find_fills(t, all_players, finalized_score)
             print(f"For team {t.team_name}, possible fills: {possible_fills}")
+            subsample = random.sample(possible_fills, 2)
+            print(f"Randomly chosen two fills: {subsample}")
+
 
 
 if __name__ == "__main__":
