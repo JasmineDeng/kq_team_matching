@@ -1,11 +1,8 @@
 import enum
-from typing import List, Dict, Set, NamedTuple
-import logging
-
-logger = logging.getLogger(__file__)
+from typing import List, NamedTuple, Set
 
 
-def clip_value(value: int, min_value: int = 1, max_value: int = 5) -> int:
+def clip_value(value: float, min_value: float = 1., max_value: float = 5.) -> float:
     return max(min_value, min(max_value, value))
 
 
@@ -40,14 +37,14 @@ class Player(BasePlayer):
             raise ValueError(f"Primary role cannot be the same as the secondary role! For {name}, got: {ranking}")
 
         if not (1 <= ranking.primary_ranking <= 5):
-            logger.warning(f"Clipping primary ranking so it's between 1-5, got: {ranking.primary_ranking}")
+            print(f"Clipping primary ranking so it's between 1-5, got: {ranking.primary_ranking}")
             val = ranking.primary_ranking
-            ranking = ranking._replace(primary_ranking=_clip_value(val))
+            ranking = ranking._replace(primary_ranking=int(clip_value(val)))
 
         if not (1 <= ranking.secondary_ranking <= 5):
-            logger.warning(f"Clipping secondary ranking so it's between 1-5, got: {ranking.secondary_ranking}")
+            print(f"Clipping secondary ranking so it's between 1-5, got: {ranking.secondary_ranking}")
             val = ranking.secondary_ranking
-            ranking = ranking._replace(primary_ranking=_clip_value(val))
+            ranking = ranking._replace(primary_ranking=int(clip_value(val)))
 
         # Below are public attrs
         self.name = name
