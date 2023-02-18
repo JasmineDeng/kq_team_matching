@@ -14,6 +14,11 @@ def _sort_fn(assigned_player: BasePlayerAssignment) -> Tuple[int, float]:
     return assigned_player.score, random.random()
 
 
+def _sort_fn_role_priority(assigned_player: PlayerAssignment) -> Tuple[int, int, float]:
+    is_primary_role = assigned_player.assigned_role == assigned_player.player.ranking.primary_role
+    return assigned_player.score, int(is_primary_role), random.random()
+
+
 def _warrior_sort_fn(player: Player) -> Tuple[int, int, float]:
     # Lower number if the player is a warrior, so if we sort ascending, it appears first
     warrior_int: int
@@ -62,7 +67,13 @@ def _players_to_assignment(players: List[Player], role: PlayerRole) -> List[Play
 
 
 def _players_to_primary_role_assignment(players: List[Player]) -> List[PlayerAssignment]:
-    return [PlayerAssignment(player=p, assigned_role=p.ranking.primary_role) for p in players]
+    to_return = []
+    for p in players:
+        if p.ranking.primary_role == PlayerRole.QUEEN:
+            to_return.append(PlayerAssignment(player=p, assigned_role=p.ranking.secondary_role))
+        else:
+            to_return.append(PlayerAssignment(player=p, assigned_role=p.ranking.primary_role))
+    return to_return
 
 
 def _select_player_role(players: List[Player], num_required: int, role: PlayerRole) -> List[PlayerAssignment]:
@@ -76,15 +87,19 @@ def _select_player_role(players: List[Player], num_required: int, role: PlayerRo
         players until we have the correct amount.
     Else, return all primary/secondary players, but there must be fills.
     """
-    primary_players = [p for p in players if p.ranking.primary_role == role]
-    secondary_players = [p for p in players if p.ranking.secondary_role == role]
+    primary_players = [PlayerAssignment(player=p, assigned_role=role) for p in players if p.ranking.primary_role == role]
+    secondary_players = [PlayerAssignment(player=p, assigned_role=role) for p in players if p.ranking.secondary_role == role]
+    # if True or role == PlayerRole.SPEED:
+    #     all_players = primary_players + secondary_players
+    #     all_players.sort(key=_sort_fn_role_priority, reverse=True)
+    #     return all_players[:num_required]
     if len(primary_players) >= num_required:
-        return _players_to_assignment(random.sample(primary_players, num_required), role)
+        return random.sample(primary_players, num_required)
     if len(primary_players) + len(secondary_players) < num_required:
-        return _players_to_assignment(primary_players + secondary_players, role)
+        return primary_players + secondary_players
     num_required_secondary = num_required - len(primary_players)
     secondary_players_sample = random.sample(secondary_players, num_required_secondary)
-    return _players_to_assignment(primary_players + secondary_players_sample, role)
+    return primary_players + secondary_players_sample
 
 
 def assign_players_to_teams(players: Set[Player]) -> List[Team]:

@@ -4,10 +4,10 @@ PROJECT_DIRECTORY=$(dirname "$0")
 
 cd "$PROJECT_DIRECTORY" || exit
 
-#if [[ -d "$PROJECT_DIRECTORY/kq_env" ]]; then
-#  echo "virtualenv already exists, skipping setup"
-#  exit 0
-#fi
+if [[ -d "$PROJECT_DIRECTORY/kq_env" ]]; then
+  echo "virtualenv already exists, skipping setup"
+  exit 0
+fi
 
 python3.11 -m venv kq_env
 source kq_env/bin/activate
