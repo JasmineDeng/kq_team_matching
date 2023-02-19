@@ -1,0 +1,18 @@
+[flake8]
+ignore =
+    # Ignore line length limits as they are handled via black.
+    E203, E501, W503,
+    # Ingore bare except because it is redundant with B001
+    E722,
+    # Ignore complexity issues.
+    C901,
+    # Ignore invalid escape sequences.
+    W605,
+    # Ignore warning about perform function calls in argument defaults.
+    B008,
+    # Ignore errors about abc classes that don't have abstract methods.
+    B024,
+    # Ignore missing docstrings.
+    # TODO: Enable these at some point.
+    D100, D101, D102, D103, D104, D105, D106, D107,
+docstring-convention=numpy
