@@ -1,13 +1,15 @@
 #!/bin/bash
 
-PROJECT_DIRECTORY=$(dirname "$0")
+PROJECT_DIRECTORY=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
-cd "$PROJECT_DIRECTORY" || exit
+echo "Project directory detected as: $PROJECT_DIRECTORY"
 
 if [[ -d "$PROJECT_DIRECTORY/kq_env" ]]; then
   echo "virtualenv already exists, skipping setup"
   exit 0
 fi
+
+cd "$PROJECT_DIRECTORY" || exit
 
 python3.11 -m venv kq_env
 source kq_env/bin/activate
