@@ -2,9 +2,9 @@ import random
 
 import click
 
-from assignment import PlayerSamplingStrategy, assign_players_to_teams
-from find_fills import find_fills
-from load_data import load_attendance, load_data
+from src.assignment import PlayerSamplingStrategy, assign_players_to_teams
+from src.find_fills import find_fills
+from src.load_data import load_attendance, load_data
 
 
 def _to_player_sampling_enum(_, __, value: str) -> PlayerSamplingStrategy:
@@ -53,9 +53,7 @@ def cli(file_path: str, player_sampling_strategy: PlayerSamplingStrategy) -> Non
     if len(finalized_team_scores) > 0:
         finalized_score = sum(finalized_team_scores) / len(finalized_team_scores)
     else:
-        print(
-            "No finalized teams, we can use any fill so long as the players are roughly equal in skill"
-        )
+        print("No finalized teams, we can use any fill so long as the players are roughly equal in skill")
         finalized_score = sum(all_team_scores) / len(all_team_scores) + 2.5
 
     for t in teams:
