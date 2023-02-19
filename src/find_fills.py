@@ -9,19 +9,37 @@ def find_fills(team: Team, all_players: Set[Player], ideal_score: float) -> List
 
     The fill is generally a range, and any kind of player can fill. Players who are primarily queens will have
     their secondary role assigned.
+
+    This function assumes that the fill is NOT a queen role.
     """
     score_diff = ideal_score - team.total_score
     # Use a range for all the score differences to increase the chances of finding a fill.
     if float(score_diff).is_integer():
-        scores_to_find = {score_diff, score_diff + 1, score_diff - 1}
+        scores_to_find = {score_diff}
     else:
         scores_to_find = {math.ceil(score_diff), math.floor(score_diff)}
     scores_to_find = {clip_value(val) for val in scores_to_find}
     possible_players = []
     for p in all_players:
-        if p.ranking.primary_role == PlayerRole.QUEEN and p.ranking.secondary_ranking in scores_to_find:
-            possible_players.append(PlayerAssignment(player=p, assigned_role=p.ranking.secondary_role))
-        if p.ranking.primary_role != PlayerRole.QUEEN and p.ranking.primary_ranking in scores_to_find:
-            possible_players.append(PlayerAssignment(player=p, assigned_role=p.ranking.primary_role))
+        # If the primary score matches the score we're trying to fill, use it
+        # Else, check secondary score
+        # Always ignore the queen role
+        if (
+            p.ranking.primary_role != PlayerRole.QUEEN
+            and p.ranking.primary_ranking in scores_to_find
+        ):
+            possible_players.append(
+                PlayerAssignment(player=p, assigned_role=p.ranking.primary_role)
+            )
+        elif (
+            p.ranking.secondary_role != PlayerRole.QUEEN
+            and p.ranking.secondary_ranking in scores_to_find
+        ):
+            possible_players.append(
+                PlayerAssignment(player=p, assigned_role=p.ranking.secondary_role)
+            )
 
-    return [f"{p.player.name} ({p.assigned_role.name[0]}) ({p.score})" for p in possible_players]
+    return [
+        f"{p.player.name} ({p.assigned_role.name[0]}) ({p.score})"
+        for p in possible_players
+    ]
