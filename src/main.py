@@ -2,16 +2,38 @@ import random
 
 import click
 
-from assignment import assign_players_to_teams
+from assignment import PlayerSamplingStrategy, assign_players_to_teams
 from find_fills import find_fills
-from load_data import load_data
+from load_data import load_attendance, load_data
+
+
+def _to_player_sampling_enum(_, __, value: str) -> PlayerSamplingStrategy:
+    return PlayerSamplingStrategy[value]
 
 
 @click.command()
-@click.option("--file-path", "-f", type=str, required=True, help="File path to csv file with player rankings.")
-def cli(file_path: str) -> None:
-    all_players = load_data(file_path)
-    teams = assign_players_to_teams(all_players)
+@click.option(
+    "--file-path",
+    "-f",
+    type=str,
+    required=True,
+    help="File path to csv file with player rankings.",
+)
+@click.option(
+    "--player-sampling-strategy",
+    "-s",
+    type=click.Choice([e.name for e in PlayerSamplingStrategy]),
+    default=PlayerSamplingStrategy.PRIORITIZE_PREFERRED_ROLE.name,
+    callback=_to_player_sampling_enum,
+    help="The sampling strategy to use.",
+)
+def cli(file_path: str, player_sampling_strategy: PlayerSamplingStrategy) -> None:
+
+    player_infos = load_data(file_path)
+    all_players = load_attendance("data/attendance.csv", player_infos)
+    print(all_players)
+
+    teams = assign_players_to_teams(all_players, player_sampling_strategy)
     teams = sorted(teams, key=lambda t: t.total_score)
     for t in teams:
         print(t)
@@ -25,8 +47,16 @@ def cli(file_path: str) -> None:
             summary_str += ", "
     print(f"All scores (in order): {summary_str}")
 
-    finalized_teams = [t.total_score for t in teams if not t.needs_fill]
-    finalized_score = sum(finalized_teams) / len(finalized_teams)
+    finalized_team_scores = [t.total_score for t in teams if not t.needs_fill]
+    all_team_scores = [t.total_score for t in teams]
+    # If no finalized teams, just aim for any average player, so long as they're all roughly equal in skill?
+    if len(finalized_team_scores) > 0:
+        finalized_score = sum(finalized_team_scores) / len(finalized_team_scores)
+    else:
+        print(
+            "No finalized teams, we can use any fill so long as the players are roughly equal in skill"
+        )
+        finalized_score = sum(all_team_scores) / len(all_team_scores) + 2.5
 
     for t in teams:
         if t.needs_fill:

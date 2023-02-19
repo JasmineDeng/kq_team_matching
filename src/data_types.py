@@ -2,7 +2,7 @@ import enum
 from typing import List, NamedTuple, Set
 
 
-def clip_value(value: float, min_value: float = 1., max_value: float = 5.) -> float:
+def clip_value(value: float, min_value: float = 1.0, max_value: float = 5.0) -> float:
     return max(min_value, min(max_value, value))
 
 
@@ -12,6 +12,7 @@ class PlayerRole(enum.Enum):
 
     'vanilla and 'speed' refer to warrior type. 'objective' refers to the objective runner.
     """
+
     OBJECTIVE = 0
     VANILLA = 1
     SPEED = 2
@@ -34,15 +35,21 @@ class BasePlayer:
 class Player(BasePlayer):
     def __init__(self, name: str, ranking: PlayerRanking) -> None:
         if ranking.primary_role == ranking.secondary_role:
-            raise ValueError(f"Primary role cannot be the same as the secondary role! For {name}, got: {ranking}")
+            raise ValueError(
+                f"Primary role cannot be the same as the secondary role! For {name}, got: {ranking}"
+            )
 
         if not (1 <= ranking.primary_ranking <= 5):
-            print(f"Clipping primary ranking so it's between 1-5, got: {ranking.primary_ranking}")
+            print(
+                f"Clipping primary ranking so it's between 1-5, got: {ranking.primary_ranking}"
+            )
             val = ranking.primary_ranking
             ranking = ranking._replace(primary_ranking=int(clip_value(val)))
 
         if not (1 <= ranking.secondary_ranking <= 5):
-            print(f"Clipping secondary ranking so it's between 1-5, got: {ranking.secondary_ranking}")
+            print(
+                f"Clipping secondary ranking so it's between 1-5, got: {ranking.secondary_ranking}"
+            )
             val = ranking.secondary_ranking
             ranking = ranking._replace(primary_ranking=int(clip_value(val)))
 
@@ -72,9 +79,15 @@ class PlayerAssignment(BasePlayerAssignment):
         self.player = player
         self.assigned_role = assigned_role
         if self.assigned_role not in player.possible_roles:
-            raise ValueError(f"Assigned role must be a possible role for the player! Got: {assigned_role} for {player}")
+            raise ValueError(
+                f"Assigned role must be a possible role for the player! Got: {assigned_role} for {player}"
+            )
         ranking = player.ranking
-        self._score = ranking.primary_ranking if ranking.primary_role == assigned_role else ranking.secondary_ranking
+        self._score = (
+            ranking.primary_ranking
+            if ranking.primary_role == assigned_role
+            else ranking.secondary_ranking
+        )
 
     @property
     def score(self) -> int:
@@ -94,16 +107,25 @@ class Team:
         self._speed = self._get_role(PlayerRole.SPEED)
         self._objective = self._get_role(PlayerRole.OBJECTIVE)
 
-        names = {self._queen.player.name, self._speed.player.name, self._objective.player.name}
+        names = {
+            self._queen.player.name,
+            self._speed.player.name,
+            self._objective.player.name,
+        }
         self._other_players = [p for p in players if p.player.name not in names]
         self._num_fills = 5 - len(players)
         if len(players) > 5:
-            raise ValueError(f"Can't have more than 5 players on a team! Got: {len(players)}")
+            raise ValueError(
+                f"Can't have more than 5 players on a team! Got: {len(players)}"
+            )
 
     def _get_role(self, role: PlayerRole) -> PlayerAssignment:
         players = [p for p in self._players if p.assigned_role == role]
         if len(players) == 0:
-            raise ValueError(f"Expected to find at least one role {role} from players {self._players}")
+            error_string = f"Expected to find at least one role {role} from players {self._players}"
+            if role == PlayerRole.QUEEN:
+                error_string += "Currently all teams MUST have a queen, queen fills are not implemented."
+            raise ValueError(error_string)
         return players[0]
 
     @property
@@ -131,9 +153,11 @@ class Team:
         }
         to_return = ""
         for p in [self._queen, self._speed, self._objective, *self._other_players]:
-            to_return += f"{role_to_print[p.assigned_role]}: {p.player.name}, {p.score}\n"
+            to_return += (
+                f"{role_to_print[p.assigned_role]}: {p.player.name}, {p.score}\n"
+            )
         if self._num_fills > 0:
-            to_return += f"Fills: {self._num_fills}\n"
+            to_return += f"Fills: {self._num_fills} required\n"
         to_return += f"Total score: {self.total_score}\n"
         return to_return
 
