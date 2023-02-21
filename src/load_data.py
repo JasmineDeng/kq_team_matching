@@ -1,7 +1,7 @@
 import csv
-from typing import Dict, List, Optional, Set
+from typing import Dict, List, Set
 
-from data_types import Player, PlayerRanking, PlayerRole
+from src.data_types import Player, PlayerRanking, PlayerRole
 
 NAME_ALIASES: List[Set[str]] = [
     {"Matt", "Matthew", "Matt Wu"},
@@ -23,7 +23,7 @@ def _get_aliases_for_name(name: str) -> Set[str]:
     return {name}
 
 
-def _try_to_int(value: str, default_value: int = 1) -> Optional[int]:
+def _try_to_int(value: str, default_value: int = 1) -> int:
     """Try to convert the provided value to an integer, if it fails, return the default value."""
     try:
         return int(value)
@@ -32,7 +32,7 @@ def _try_to_int(value: str, default_value: int = 1) -> Optional[int]:
         return default_value
 
 
-def _load_all_rankings(data: Dict[str, str]) -> Dict[str, int]:
+def _load_all_rankings(data: Dict[str, str]) -> Dict[PlayerRole, int]:
     """Load all rankings for all roles given a dictionary representing a CSV row.
 
     This function is currently not used.
@@ -74,15 +74,11 @@ def load_data(csv_path: str) -> Dict[str, PlayerRanking]:
             all_names.append(name)
 
     if len(all_names) != len(to_return):
-        raise ValueError(
-            f"Got a duplicate player somewhere. Had {len(to_return)} players but {len(all_names)}"
-        )
+        raise ValueError(f"Got a duplicate player somewhere. Had {len(to_return)} players but {len(all_names)}")
     return to_return
 
 
-def load_attendance(
-    csv_path: str, player_info: Dict[str, PlayerRanking]
-) -> Set[Player]:
+def load_attendance(csv_path: str, player_info: Dict[str, PlayerRanking]) -> Set[Player]:
     players = set()
 
     with open(csv_path, newline="") as csvfile:
