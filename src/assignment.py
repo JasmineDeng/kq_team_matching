@@ -136,7 +136,18 @@ def _sample_players_by_preferred_role(
     return primary_players + secondary_players_sample
 
 
-def assign_players_to_teams(players: Set[Player], player_sampling_strategy: PlayerSamplingStrategy) -> List[Team]:
+def check_blacklist(potential_player: Player, group, blacklist) -> bool:
+    for y in group.players:
+        y = y.player.name
+        for x in blacklist:
+            if x == {potential_player, y}:
+                return True
+    return False
+
+
+def assign_players_to_teams(
+    players: Set[Player], player_sampling_strategy: PlayerSamplingStrategy, blacklist
+) -> List[Team]:
     # Find the minimum number of teams required. At most we have 4 fills.
     total_teams = math.ceil(len(players) / 5)
 
@@ -184,10 +195,18 @@ def assign_players_to_teams(players: Set[Player], player_sampling_strategy: Play
             # The selected players for the role are reverse sorted, highest->lowest and we group the players by
             # the position in the list. E.g., strongest player is added to weakest group, and weakest player is
             # assigned to the strongest group.
+            # If a player cannot be added to the player group, then??
             player_groups = sorted(player_groups, key=_sort_fn)
             players_for_role = sorted(list(players_for_role), key=_sort_fn, reverse=True)
             for ind, group in enumerate(player_groups):
+                potential_player = players_for_role[ind].player.name
+                check_blacklist(potential_player, group, blacklist)
                 group.players.append(players_for_role[ind])
+            # for group in player_groups:
+            # possible_players = _get_all_players_not_on_blacklist(blacklist, all_players) <- need to write this function
+            # player = _sample_players_by_highest_score(possible_players, 1, role)
+            # group.players.append(player)
+            # _remove_from_set(all_players, player)
 
     # The remaining players are what we can get.
     remaining_players = sorted(_players_to_primary_role_assignment(players_to_select), key=_sort_fn)
