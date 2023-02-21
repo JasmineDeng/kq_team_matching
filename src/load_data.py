@@ -1,15 +1,34 @@
 import csv
-from typing import Dict, Set
+from typing import Dict, List, Set
 
 from src.data_types import Player, PlayerRanking, PlayerRole
+
+NAME_ALIASES: List[Set[str]] = [
+    {"Matt", "Matthew", "Matt Wu"},
+    {"Chris", "Blue Chris"},
+    {"Maureen", "Mo"},
+    {"Blee", "Brian Lee"},
+]
+"""A list of aliases that people can be called by.
+
+The actual name comparison is case- and whitespace-insensitive. I.e., 'Matt ', 'mAtt', and ' MATT ' are treated as the
+same name.
+"""
+
+
+def _get_aliases_for_name(name: str) -> Set[str]:
+    for aliases in NAME_ALIASES:
+        if name in aliases:
+            return aliases
+    return {name}
 
 
 def _try_to_int(value: str, default_value: int = 1) -> int:
     """Try to convert the provided value to an integer, if it fails, return the default value."""
     try:
         return int(value)
-    except Exception:
-        print(f"Could not convert {value} to integer")
+    except Exception as e:
+        print(f"Could not convert {value} to integer, because: {e}")
         return default_value
 
 
@@ -67,7 +86,19 @@ def load_attendance(csv_path: str, player_info: Dict[str, PlayerRanking]) -> Set
         next(reader)  # skip the header
         for row in reader:
             name = row[1]
-            player = Player(name=name, ranking=player_info[name.lower().strip()])
+
+            # Get all players, checking if any of the nicknames have ranking data associated
+            aliases = _get_aliases_for_name(name)
+            current_player = None
+            for alias in aliases:
+                if alias.lower().strip() in player_info:
+                    current_player = player_info[alias.lower().strip()]
+                    break
+            if current_player is None:
+                raise ValueError(
+                    f"Could not find ranking data for player with name: '{name}', had aliases: {aliases}, all possible players: {list(player_info.keys())}"
+                )
+            player = Player(name=name, ranking=current_player)
             players.add(player)
     return players
 
