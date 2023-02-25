@@ -38,6 +38,8 @@ def test_exclusion_assign_players_to_teams() -> None:
 
     teams = assign_players_to_teams(all_players, PlayerSamplingStrategy.PRIORITIZE_HIGHEST_SCORE, [{"A", "F"}])
     assert len(teams) == 2
+    # Sort by team name (queen name)
+    teams.sort(key=lambda team: team.team_name)
     team_player_names = _team_to_player_names(teams[0])
     assert "A" in team_player_names and "B" in team_player_names
     team_player_names = _team_to_player_names(teams[1])
