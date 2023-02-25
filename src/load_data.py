@@ -103,5 +103,18 @@ def load_attendance(csv_path: str, player_info: Dict[str, PlayerRanking]) -> Set
     return players
 
 
+def load_blacklist(csv_path: str) -> List[Set[str]]:
+    blacklist = []
+    with open(csv_path, newline="") as csvfile:
+        reader = csv.reader(csvfile)
+        next(reader)  # skip the header
+        for row in reader:
+            name1 = row[0]
+            name2 = row[1]
+            blacklist.append({name1, name2})
+
+    return blacklist
+
+
 if __name__ == "__main__":
     print(load_data("data/test_data.csv"))

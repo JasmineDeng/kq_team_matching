@@ -69,3 +69,7 @@ def test_sample_players_by_preferred_role() -> None:
     assert len(assignments) == 1
     assert assignments[0].assigned_role == PlayerRole.OBJECTIVE
     assert assignments[0].player.name == "B"
+
+
+def test_assignment_exclusion() -> None:
+    ...

@@ -136,7 +136,18 @@ def _sample_players_by_preferred_role(
     return primary_players + secondary_players_sample
 
 
-def assign_players_to_teams(players: Set[Player], player_sampling_strategy: PlayerSamplingStrategy) -> List[Team]:
+def matches_exclusion_set(potential_player: Player, group: _PlayerGroup, blacklist) -> bool:
+    for y in group.players:
+        y = y.player.name
+        for x in blacklist:
+            if x == {potential_player, y}:
+                return True
+    return False
+
+
+def assign_players_to_teams(
+    players: Set[Player], player_sampling_strategy: PlayerSamplingStrategy, exclusion_set: List[Set[str]]
+) -> List[Team]:
     # Find the minimum number of teams required. At most we have 4 fills.
     total_teams = math.ceil(len(players) / 5)
 
