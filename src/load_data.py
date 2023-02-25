@@ -1,5 +1,5 @@
 import csv
-from typing import Dict, List, Set
+from typing import Dict, List, Optional, Set
 
 from src.data_types import Player, PlayerRanking, PlayerRole
 
@@ -16,11 +16,27 @@ same name.
 """
 
 
-def _get_aliases_for_name(name: str) -> Set[str]:
-    for aliases in NAME_ALIASES:
-        if name in aliases:
-            return aliases
-    return {name}
+def convert_alias_to_name(all_names: Set[str], name: str, all_aliases: Optional[List[Set[str]]] = None) -> str:
+    """Given a set of all player names, check if the name is an alias and, if so, convert to the name in the set.
+
+    This ensures that we refer to someone by only one name throughout the assignment, excluding nicknames.
+    """
+    # Mapping from the name we do comparison with to the name we should return
+    lowercase_all_names: Dict[str, str] = {name.lower().strip(): name for name in all_names}
+
+    alias_list = [name]
+    all_aliases_list = all_aliases or NAME_ALIASES
+    for elem in all_aliases_list:
+        if name in elem:
+            alias_list = elem
+            break
+
+    for alias in alias_list:
+        # make sure the comparison is whitespace- and case-insensitive
+        alias_to_compare = alias.lower().strip()
+        if alias_to_compare in lowercase_all_names:
+            return lowercase_all_names[alias_to_compare]
+    return name
 
 
 def _try_to_int(value: str, default_value: int = 1) -> int:
@@ -88,32 +104,30 @@ def load_attendance(csv_path: str, player_info: Dict[str, PlayerRanking]) -> Set
             name = row[1]
 
             # Get all players, checking if any of the nicknames have ranking data associated
-            aliases = _get_aliases_for_name(name)
-            current_player = None
-            for alias in aliases:
-                if alias.lower().strip() in player_info:
-                    current_player = player_info[alias.lower().strip()]
-                    break
+            player_name = convert_alias_to_name(set(player_info.keys()), name)
+            current_player = player_info.get(player_name, None)
             if current_player is None:
                 raise ValueError(
-                    f"Could not find ranking data for player with name: '{name}', had aliases: {aliases}, all possible players: {list(player_info.keys())}"
+                    f"Could not find ranking data for player with name: '{name}', possible aliases: {NAME_ALIASES}, "
+                    f"all possible players: {list(player_info.keys())}"
                 )
             player = Player(name=name, ranking=current_player)
             players.add(player)
     return players
 
 
-def load_blacklist(csv_path: str) -> List[Set[str]]:
-    blacklist = []
+def load_exclusion_set(csv_path: str, all_names: Set[str]) -> List[Set[str]]:
+    """Given a csv, load sets of people who should not play on the same team."""
+    exclusion_set = []
     with open(csv_path, newline="") as csvfile:
         reader = csv.reader(csvfile)
         next(reader)  # skip the header
         for row in reader:
-            name1 = row[0]
-            name2 = row[1]
-            blacklist.append({name1, name2})
+            name1 = convert_alias_to_name(all_names, row[0])
+            name2 = convert_alias_to_name(all_names, row[1])
+            exclusion_set.append({name1, name2})
 
-    return blacklist
+    return exclusion_set
 
 
 if __name__ == "__main__":

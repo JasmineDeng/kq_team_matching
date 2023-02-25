@@ -4,7 +4,7 @@ import click
 
 from src.assignment import PlayerSamplingStrategy, assign_players_to_teams
 from src.find_fills import find_fills
-from src.load_data import load_attendance, load_blacklist, load_data
+from src.load_data import load_attendance, load_data, load_exclusion_set
 
 
 def _to_player_sampling_enum(_, __, value: str) -> PlayerSamplingStrategy:
@@ -30,10 +30,10 @@ def _to_player_sampling_enum(_, __, value: str) -> PlayerSamplingStrategy:
 def cli(file_path: str, player_sampling_strategy: PlayerSamplingStrategy) -> None:
 
     player_infos = load_data(file_path)
+    all_names = set(player_infos.keys())
     all_players = load_attendance("data/attendance.csv", player_infos)
-    print(all_players)
 
-    exclusion_set = load_blacklist("data/blacklist.csv")
+    exclusion_set = load_exclusion_set("data/exclusion_set.csv", all_names)
     teams = assign_players_to_teams(all_players, player_sampling_strategy, exclusion_set)
     teams = sorted(teams, key=lambda t: t.total_score)
     for t in teams:
