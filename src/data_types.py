@@ -24,7 +24,7 @@ class Player:
 
         for role, rank in ranking.items():
             if not (1 <= rank <= 10):
-                print(f"Clipping ranking so it's between 1-5, got: {rank}")
+                print(f"Clipping ranking so it's between 1-10, got: {rank}")
                 ranking[role] = clip_value(rank)
 
         # Below are public attrs
