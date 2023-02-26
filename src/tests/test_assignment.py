@@ -1,13 +1,13 @@
 from typing import Set
 
 from src.assignment import assign_players_to_teams
-from src.data_types import Player, PlayerRanking, PlayerRole, Team
-from src.sampling import PlayerSamplingStrategy
+from src.data_types import Player, PlayerRole, Team
 
 
-def _player_ranking_ignore_secondary(role: PlayerRole, ranking: int) -> PlayerRanking:
-    secondary_role = PlayerRole.VANILLA if role != PlayerRole.VANILLA else PlayerRole.OBJECTIVE
-    return PlayerRanking(primary_role=role, primary_ranking=ranking, secondary_role=secondary_role, secondary_ranking=1)
+def _player_one_role(name: str, player_role: PlayerRole, ranking: int) -> Player:
+    ranking_dict = {role: 1.0 for role in PlayerRole}
+    ranking_dict[player_role] = ranking
+    return Player(name=name, primary_role=player_role, ranking=ranking_dict)
 
 
 def _team_to_player_names(team: Team) -> Set[str]:
@@ -17,17 +17,17 @@ def _team_to_player_names(team: Team) -> Set[str]:
 def test_exclusion_assign_players_to_teams() -> None:
     all_players = {
         # Team 1
-        Player(name="A", ranking=_player_ranking_ignore_secondary(PlayerRole.QUEEN, 5)),
-        Player(name="B", ranking=_player_ranking_ignore_secondary(PlayerRole.SPEED, 5)),
-        Player(name="C", ranking=_player_ranking_ignore_secondary(PlayerRole.OBJECTIVE, 5)),
-        Player(name="D", ranking=_player_ranking_ignore_secondary(PlayerRole.VANILLA, 5)),
+        _player_one_role("A", PlayerRole.QUEEN, 5),
+        _player_one_role("B", PlayerRole.SPEED, 5),
+        _player_one_role("C", PlayerRole.OBJECTIVE, 5),
+        _player_one_role("D", PlayerRole.FLEX, 5),
         # Team 2
-        Player(name="E", ranking=_player_ranking_ignore_secondary(PlayerRole.QUEEN, 4)),
-        Player(name="F", ranking=_player_ranking_ignore_secondary(PlayerRole.SPEED, 4)),
-        Player(name="G", ranking=_player_ranking_ignore_secondary(PlayerRole.VANILLA, 5)),
-        Player(name="H", ranking=_player_ranking_ignore_secondary(PlayerRole.OBJECTIVE, 5)),
+        _player_one_role("E", PlayerRole.QUEEN, 4),
+        _player_one_role("F", PlayerRole.SPEED, 4),
+        _player_one_role("G", PlayerRole.FLEX, 5),
+        _player_one_role("H", PlayerRole.OBJECTIVE, 5),
     }
-    teams = assign_players_to_teams(all_players, PlayerSamplingStrategy.PRIORITIZE_HIGHEST_SCORE, [])
+    teams = assign_players_to_teams(all_players, [])
     assert len(teams) == 2
     # Sort by team name (queen name)
     teams.sort(key=lambda team: team.team_name)
@@ -36,7 +36,7 @@ def test_exclusion_assign_players_to_teams() -> None:
     team_player_names = _team_to_player_names(teams[1])
     assert "E" in team_player_names and "B" in team_player_names
 
-    teams = assign_players_to_teams(all_players, PlayerSamplingStrategy.PRIORITIZE_HIGHEST_SCORE, [{"A", "F"}])
+    teams = assign_players_to_teams(all_players, [{"A", "F"}])
     assert len(teams) == 2
     # Sort by team name (queen name)
     teams.sort(key=lambda team: team.team_name)

@@ -34,7 +34,7 @@ def cli(file_path: str, player_sampling_strategy: PlayerSamplingStrategy) -> Non
     all_players = load_attendance("data/attendance.csv", player_infos)
 
     exclusion_set = load_exclusion_set("data/exclusion_set.csv", all_names)
-    teams = assign_players_to_teams(all_players, player_sampling_strategy, exclusion_set)
+    teams = assign_players_to_teams(all_players, exclusion_set)
     teams = sorted(teams, key=lambda t: t.total_score)
     for t in teams:
         print(t)
