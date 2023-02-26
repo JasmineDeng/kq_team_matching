@@ -19,6 +19,7 @@ def find_fills(team: Team, all_players: Set[Player], ideal_score: float) -> List
     possible_players = []
     for p in all_players:
         # Always assume fills are flex
-        possible_players.append(PlayerAssignment(player=p, assigned_role=PlayerRole.FLEX))
+        if p.ranking[PlayerRole.FLEX] in scores_to_find:
+            possible_players.append(PlayerAssignment(player=p, assigned_role=PlayerRole.FLEX))
 
     return [f"{p.player.name} ({p.assigned_role.name[0]}) ({p.score})" for p in possible_players]
