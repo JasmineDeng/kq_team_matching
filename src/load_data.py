@@ -25,7 +25,7 @@ def convert_alias_to_name(all_names: Set[str], name: str, all_aliases: Optional[
     # Mapping from the name we do comparison with to the name we should return
     lowercase_all_names: Dict[str, str] = {name.lower().strip(): name for name in all_names}
 
-    alias_list = [name]
+    alias_list = {name}
     all_aliases_list = all_aliases or NAME_ALIASES
     for elem in all_aliases_list:
         if name in elem:
@@ -68,13 +68,13 @@ def load_data(csv_path: str) -> Dict[str, Player]:
 
             ranking_dict = {role: row[key] for key, role in column_name_to_role.items()}
             # convert values to floats
-            ranking_dict = {key: _try_to_float(value) for key, value in ranking_dict.items()}
+            float_ranking_dict = {key: _try_to_float(value) for key, value in ranking_dict.items()}
 
             name = row["Name"]
             to_return[name.lower().strip()] = Player(
                 name=name,
                 primary_role=primary_role,
-                ranking=ranking_dict,
+                ranking=float_ranking_dict,
             )
             all_names.append(name)
 

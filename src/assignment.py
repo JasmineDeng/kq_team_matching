@@ -154,21 +154,23 @@ def _assign_players_with_exclusion_set(
         player_groups, PlayerSamplingStrategy.PRIORITIZE_HIGHEST_SCORE, possible_players, len(player_groups), role
     )
     # Assign the teams with excluded people first
-    for group in groups_with_exclusion:
-        ideal_score = ideal_scores[group.group]
+    for exclude_group in groups_with_exclusion:
+        ideal_score = ideal_scores[exclude_group.group]
         assignment = _get_player_with_exclusion_set(
             possible_players,
             role,
-            group.to_exclude,
+            exclude_group.to_exclude,
             ideal_score,
         )
         if assignment is None:
-            print(f"Skipping assignment for {group}, role {role}, ideal score {ideal_score}")
+            print(f"Skipping assignment for {exclude_group}, role {role}, ideal score {ideal_score}")
             continue
-        group.group.players.append(assignment)
+        exclude_group.group.players.append(assignment)
         assigned_players.append(assignment)
         possible_players = _remove_subset_from_players(possible_players, [assignment])
-        print(f"Excluding {group.to_exclude}, picked player {assignment} for team {group}, ideal score: {ideal_score}")
+        print(
+            f"Excluding {exclude_group.to_exclude}, picked player {assignment} for team {exclude_group.group}, ideal score: {ideal_score}"
+        )
 
     players_to_assign = sample_players(
         PlayerSamplingStrategy.PRIORITIZE_HIGHEST_SCORE, possible_players, len(groups_without_exclusion), role

@@ -41,7 +41,7 @@ class Player:
 
 class BasePlayerAssignment:
     @property
-    def score(self) -> int:
+    def score(self) -> float:
         raise NotImplementedError
 
     @property
