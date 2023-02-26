@@ -8,6 +8,7 @@ NAME_ALIASES: List[Set[str]] = [
     {"Chris", "Blue Chris"},
     {"Maureen", "Mo"},
     {"Blee", "Brian Lee"},
+    {"BrianM", "Brian M"},
 ]
 """A list of aliases that people can be called by.
 
@@ -109,9 +110,7 @@ def load_attendance(csv_path: str, player_info: Dict[str, Player]) -> Set[Player
                 current_player.primary_role = PlayerRole.QUEEN
             elif is_obj == "1":
                 current_player.primary_role = PlayerRole.OBJECTIVE
-            elif is_queen == "" and current_player.primary_role == PlayerRole.QUEEN:
-                current_player.primary_role = PlayerRole.FLEX
-            elif is_obj == "" and current_player.primary_role == PlayerRole.OBJECTIVE:
+            elif current_player.primary_role == PlayerRole.QUEEN or current_player.primary_role == PlayerRole.OBJECTIVE:
                 current_player.primary_role = PlayerRole.FLEX
 
             players.add(current_player)

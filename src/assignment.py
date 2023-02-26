@@ -14,11 +14,15 @@ class _PlayerGroup(BasePlayerAssignment):
         self.players = players
 
     @property
-    def score(self) -> int:
+    def score(self) -> float:
         return sum(p.score for p in self.players)
 
+    @property
+    def weighted_score(self) -> float:
+        return round(sum(p.weighted_score for p in self.players), 3)
+
     def __str__(self) -> str:
-        return f"players: {self.players}, score: {self.score}"
+        return f"players: {self.players}, score: {self.score}, weighted {self.weighted_score}\n"
 
     def __repr__(self) -> str:
         return str(self)
@@ -30,12 +34,12 @@ class _GroupWithExclusions(NamedTuple):
     """Players who cannot be added to this group due to the exclusion set."""
 
 
-def _sort_by_score_fn(assigned_player: BasePlayerAssignment) -> Tuple[int, float]:
+def _sort_by_score_fn(assigned_player: BasePlayerAssignment) -> Tuple[float, float]:
     """Return the score and a random number.
 
     The second random number will be used to break ties randomly.
     """
-    return assigned_player.score, random.random()
+    return assigned_player.weighted_score, random.random()
 
 
 def _remove_subset_from_players(all_players: List[Player], to_remove: List[PlayerAssignment]) -> List[Player]:
@@ -203,7 +207,7 @@ def assign_players_to_teams(players: Set[Player], exclusion_set: List[Set[str]])
         PlayerRole.FLEX,
         PlayerRole.OBJECTIVE,
     ]:
-        print(f"current scores: {[group.score for group in player_groups]}")
+        print(f"groups: {player_groups}")
 
         # if you can play speed, you can flex
         valid_roles = {player_role} if player_role != PlayerRole.FLEX else {PlayerRole.FLEX, PlayerRole.SPEED}

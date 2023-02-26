@@ -19,16 +19,7 @@ def _to_player_sampling_enum(_, __, value: str) -> PlayerSamplingStrategy:
     required=True,
     help="File path to csv file with player rankings.",
 )
-@click.option(
-    "--player-sampling-strategy",
-    "-s",
-    type=click.Choice([e.name for e in PlayerSamplingStrategy]),
-    default=PlayerSamplingStrategy.PRIORITIZE_HIGHEST_SCORE.name,
-    callback=_to_player_sampling_enum,
-    help="The sampling strategy to use.",
-)
-def cli(file_path: str, player_sampling_strategy: PlayerSamplingStrategy) -> None:
-
+def cli(file_path: str) -> None:
     player_infos = load_data(file_path)
     all_names = set(player_infos.keys())
     all_players = load_attendance("data/attendance.csv", player_infos)
@@ -47,6 +38,7 @@ def cli(file_path: str, player_sampling_strategy: PlayerSamplingStrategy) -> Non
         else:
             summary_str += ", "
     print(f"All scores (in order): {summary_str}")
+    print(f"All weighted scores (in order): {[t.total_weighted_score for t in teams]}")
 
     finalized_team_scores = [t.total_score for t in teams if not t.needs_fill]
     all_team_scores = [t.total_score for t in teams]

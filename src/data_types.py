@@ -44,6 +44,10 @@ class BasePlayerAssignment:
     def score(self) -> int:
         raise NotImplementedError
 
+    @property
+    def weighted_score(self) -> float:
+        raise NotImplementedError
+
 
 class PlayerAssignment(BasePlayerAssignment):
     def __init__(self, player: Player, assigned_role: PlayerRole) -> None:
@@ -54,7 +58,10 @@ class PlayerAssignment(BasePlayerAssignment):
 
     @property
     def score(self) -> float:
-        weight = 1.0
+        return self._score
+
+    @property
+    def weighted_score(self) -> float:
         if self.assigned_role == PlayerRole.QUEEN:
             weight = 0.275
         elif self.assigned_role == PlayerRole.SPEED:
@@ -63,10 +70,12 @@ class PlayerAssignment(BasePlayerAssignment):
             weight = 0.175
         elif self.assigned_role == PlayerRole.OBJECTIVE:
             weight = 0.125
-        return round(self._score * weight, 3)
+        else:
+            weight = 1.0
+        return round(weight * self.score, 3)
 
     def __str__(self) -> str:
-        return f"player: {self.player.name}, assigned: {self.assigned_role.name}, score {self.score}."
+        return f"player: {self.player.name} {self.assigned_role.name}, score {self.score}."
 
     def __repr__(self) -> str:
         return str(self)
@@ -100,7 +109,11 @@ class Team:
 
     @property
     def total_score(self) -> float:
-        return round(sum([p.score for p in self.players]), 3)
+        return sum([p.score for p in self.players])
+
+    @property
+    def total_weighted_score(self) -> float:
+        return round(sum([p.weighted_score for p in self.players]), 3)
 
     @property
     def num_fills(self) -> int:
@@ -126,7 +139,7 @@ class Team:
             to_return += f"{role_to_print[p.assigned_role]}: {p.player.name}, {p.score}\n"
         if self._num_fills > 0:
             to_return += f"Fills: {self._num_fills} required\n"
-        to_return += f"Total score: {self.total_score}\n"
+        to_return += f"Total score: {self.total_score}, weighted: {self.total_weighted_score}\n"
         return to_return
 
     def __repr__(self) -> str:
