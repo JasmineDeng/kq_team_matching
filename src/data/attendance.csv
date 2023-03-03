@@ -1,18 +1,21 @@
-Timestamp,Who are you?!,What role do you want to play? (primary),What role do you want to play if your primary role isn't available? (secondary),,,,,
-2/13/2023 9:52:58,Jasmine,Objective,Vanilla Warrior,,,,,
-2/13/2023 9:59:20,Sam,Vanilla Warrior,Speed Warrior,,,prim,sec,either
-2/13/2023 10:06:16,Dan,Queen,Speed Warrior,,speed warrior,5,5,10
-2/13/2023 10:15:40,Coki,Vanilla Warrior,Objective,,objective,3,4,7
-2/13/2023 10:18:32,Drew,Speed Warrior,Queen,,queen,5,1,6
-2/13/2023 10:21:24,Jess,Queen,Objective,,vanilla warrior,3,6,9
-2/13/2023 10:31:52,Turese,Objective,Vanilla Warrior,,,,,
-2/13/2023 10:42:00,Chaz,Queen,Speed Warrior,,,,,
-2/13/2023 10:44:58,Josh,Queen,Speed Warrior,,,,,
-2/13/2023 10:50:20,Charles,Speed Warrior,Vanilla Warrior,,,,,
-2/13/2023 11:10:08,Felix,Speed Warrior,Vanilla Warrior,,,,,
-2/13/2023 11:14:01,Blue Chris,Queen,Vanilla Warrior,,,,,
-2/13/2023 13:08:35,steve,Objective,Speed Warrior,,,,,
-2/13/2023 14:47:51,Brian M,Speed Warrior,Vanilla Warrior,,,,,
-2/13/2023 18:09:49,DRay,Speed Warrior,Objective,,,,,
-2/13/2023 19:32:42,Maureen,Vanilla Warrior,Objective,,,,,
-,Matt,Speed Warrior,Objective,
+Player,Wants Q,Wants Obj
+Chaz,1,
+Josh,,
+Brian Lee,,
+Charles,,
+Dan,1,
+Dray,,
+Felix,,
+Steve,,
+David,,1
+Jess,1,
+Matt,,
+Jasmine,,1
+Scott,,
+Mo,,
+Chris,1,
+Sam,,
+Brian M,,1
+Drew,,
+Brad,,
+Turese,,1

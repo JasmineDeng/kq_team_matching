@@ -1,4 +1,4 @@
-from src.data_types import Player, PlayerRanking, PlayerRole
+from src.data_types import Player, PlayerRole
 from src.sampling import _sample_players_by_highest_score, _sample_players_by_preferred_role
 
 
@@ -6,30 +6,27 @@ def test_sample_players_by_highest_score() -> None:
     players = [
         Player(
             name="A",
-            ranking=PlayerRanking(
-                primary_role=PlayerRole.VANILLA,
-                primary_ranking=3,
-                secondary_role=PlayerRole.OBJECTIVE,
-                secondary_ranking=4,
-            ),
+            primary_role=PlayerRole.FLEX,
+            ranking={
+                PlayerRole.FLEX: 3,
+                PlayerRole.OBJECTIVE: 4,
+            },
         ),
         Player(
             name="B",
-            ranking=PlayerRanking(
-                primary_role=PlayerRole.OBJECTIVE,
-                primary_ranking=2,
-                secondary_role=PlayerRole.VANILLA,
-                secondary_ranking=5,
-            ),
+            primary_role=PlayerRole.OBJECTIVE,
+            ranking={
+                PlayerRole.OBJECTIVE: 2,
+                PlayerRole.FLEX: 5,
+            },
         ),
         Player(
             name="C",
-            ranking=PlayerRanking(
-                primary_role=PlayerRole.OBJECTIVE,
-                primary_ranking=4,
-                secondary_role=PlayerRole.VANILLA,
-                secondary_ranking=5,
-            ),
+            primary_role=PlayerRole.OBJECTIVE,
+            ranking={
+                PlayerRole.OBJECTIVE: 4,
+                PlayerRole.FLEX: 5,
+            },
         ),
     ]
     assignments = _sample_players_by_highest_score(players, 1, PlayerRole.OBJECTIVE)
@@ -48,21 +45,16 @@ def test_sample_players_by_preferred_role() -> None:
     players = [
         Player(
             name="A",
-            ranking=PlayerRanking(
-                primary_role=PlayerRole.VANILLA,
-                primary_ranking=3,
-                secondary_role=PlayerRole.OBJECTIVE,
-                secondary_ranking=4,
-            ),
+            primary_role=PlayerRole.FLEX,
+            ranking={
+                PlayerRole.FLEX: 3,
+                PlayerRole.OBJECTIVE: 4,
+            },
         ),
         Player(
             name="B",
-            ranking=PlayerRanking(
-                primary_role=PlayerRole.OBJECTIVE,
-                primary_ranking=2,
-                secondary_role=PlayerRole.VANILLA,
-                secondary_ranking=5,
-            ),
+            primary_role=PlayerRole.OBJECTIVE,
+            ranking={PlayerRole.OBJECTIVE: 2, PlayerRole.FLEX: 5},
         ),
     ]
     assignments = _sample_players_by_preferred_role(players, 1, PlayerRole.OBJECTIVE)
