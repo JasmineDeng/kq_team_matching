@@ -1,24 +1,25 @@
-,Name,Primary Role,Secondary Role,primary rank,secondary rank,,queen rank,vanilla rank,speed rank,objective rank
-,Chaz,Queen,Objective,4,1,,4,1,1,1
-,Brad,Vanilla,Objective,2,2,,1,2,2,2
-,Ryan,Speed,Vanilla,5,5,,3,5,5,3
-,Ben,Speed,Vanilla,3,4,,2,4,3,3
-,Dan,Queen,Vanilla,4,4,,4,4,3,3
-,Blee,vanilla,speed,5,4,,3,5,4,5
-,Josh,Queen,Objective,5,5,,5,5,5,5
-,David,objective,vanilla,3,1,,1,1,1,3
-,DRay,speed,vanilla,5,5,,3,5,5,4
-,Felix,speed,vanilla,5,4,,2,4,5,4
-,Coki,objective,vanilla,3,2,,1,2,2,3
-,Brian M,vanilla,speed,4,4,,3,4,4,5
-,Jess,queen,speed,4,4,,4,4,4,4
-,Blue Chris,vanilla,queen,5,4,,4,5,5,3
-,Sam ,vanilla,speed,5,4,,3,5,4,5
-,Charles,vanilla,objective,2,2,,1,2,2,2
-,Jasmine,objective,vanilla,5,2,,1,2,2,5
-,Matt,speed,vanilla,5,4,,3,4,5,4
-,Turese,objective,vanilla,3,2,,1,2,2,3
-,Steve,vanilla,speed,5,4,,3,5,4,3
-,Drew,speed,queen,4,3,,3,4,4,3
-,Keoni,speed,vanilla,2,2,,1,2,2,1
-,Maureen,vanilla,objective,2,3
+,Name,Primary Role,Secondary Role,,queen rank,flex rank,speed rank,objective rank
+,Chaz,Queen,flex,,7,5,6,4
+,Brad,flex,Objective,,1,3,3,3
+,Ryan,Speed,flex,,5,8,8,7
+,Ben,Speed,flex,,4,7,6,6
+,Dan,Queen,flex,,7,7,6,6
+,Blee,flex,speed,,6,8,7,8
+,Josh,Queen,Objective,,9,9,9,9
+,David,objective,flex,,1,3,2,5
+,Dray,speed,flex,,6,9,9,7
+,Felix,speed,flex,,4,8,9,7
+,Coki,objective,flex,,1,3,2,5
+,Brian M,flex,speed,,5,7,7,10
+,Jess,queen,objective,,7,7,6,7
+,Blue Chris,speed,queen,,6,8,8,7
+,Sam ,flex,speed,,4,8,7,9
+,Charles,flex,objective,,3,4,3,4
+,Jasmine,objective,flex,,3,5,5,9
+,Matt,speed,flex,,6,8,10,8
+,Turese,objective,flex,,1,3,3,6
+,Steve,flex,speed,,4,9,8,7
+,Drew,speed,queen,,5,7,7,7
+,Keoni,flex,speed,,1,4,3,2
+,Mo,flex,objective,,2,3,4,5
+,Scott,speed,flex,,3,7,7,7

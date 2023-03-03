@@ -1,8 +1,8 @@
 import enum
-from typing import List, NamedTuple, Set
+from typing import Dict, List
 
 
-def clip_value(value: float, min_value: float = 1.0, max_value: float = 5.0) -> float:
+def clip_value(value: float, min_value: float = 1.0, max_value: float = 10.0) -> float:
     return max(min_value, min(max_value, value))
 
 
@@ -10,53 +10,30 @@ def clip_value(value: float, min_value: float = 1.0, max_value: float = 5.0) -> 
 class PlayerRole(enum.Enum):
     """Potential roles a player might play on a killer queen team.
 
-    'vanilla and 'speed' refer to warrior type. 'objective' refers to the objective runner.
+    'speed' refers to warrior type, and should be hand-selected. 'objective' refers to the objective runner.
     """
 
     OBJECTIVE = 0
-    VANILLA = 1
+    FLEX = 1
     SPEED = 2
     QUEEN = 3
 
 
-class PlayerRanking(NamedTuple):
-    primary_role: PlayerRole
-    secondary_role: PlayerRole
-    primary_ranking: int
-    secondary_ranking: int
+class Player:
+    def __init__(self, name: str, primary_role: PlayerRole, ranking: Dict[PlayerRole, float]) -> None:
 
-
-class BasePlayer:
-    @property
-    def possible_roles(self) -> Set[PlayerRole]:
-        raise NotImplementedError
-
-
-class Player(BasePlayer):
-    def __init__(self, name: str, ranking: PlayerRanking) -> None:
-        if ranking.primary_role == ranking.secondary_role:
-            raise ValueError(f"Primary role cannot be the same as the secondary role! For {name}, got: {ranking}")
-
-        if not (1 <= ranking.primary_ranking <= 5):
-            print(f"Clipping primary ranking so it's between 1-5, got: {ranking.primary_ranking}")
-            val = ranking.primary_ranking
-            ranking = ranking._replace(primary_ranking=int(clip_value(val)))
-
-        if not (1 <= ranking.secondary_ranking <= 5):
-            print(f"Clipping secondary ranking so it's between 1-5, got: {ranking.secondary_ranking}")
-            val = ranking.secondary_ranking
-            ranking = ranking._replace(primary_ranking=int(clip_value(val)))
+        for role, rank in ranking.items():
+            if not (1 <= rank <= 10):
+                print(f"Clipping ranking so it's between 1-10, got: {rank}")
+                ranking[role] = clip_value(rank)
 
         # Below are public attrs
         self.name = name
         self.ranking = ranking
-
-    @property
-    def possible_roles(self) -> Set[PlayerRole]:
-        return {self.ranking.primary_role, self.ranking.secondary_role}
+        self.primary_role = primary_role
 
     def __str__(self) -> str:
-        return f"name: {self.name}, ranking: {self.ranking}"
+        return f"name: {self.name}, primary role: {self.primary_role}, ranking: {self.ranking}"
 
     def __repr__(self) -> str:
         return str(self)
@@ -64,25 +41,41 @@ class Player(BasePlayer):
 
 class BasePlayerAssignment:
     @property
-    def score(self) -> int:
+    def score(self) -> float:
+        raise NotImplementedError
+
+    @property
+    def weighted_score(self) -> float:
         raise NotImplementedError
 
 
 class PlayerAssignment(BasePlayerAssignment):
-    def __init__(self, player: Player, assigned_role: PlayerRole):
+    def __init__(self, player: Player, assigned_role: PlayerRole) -> None:
         self.player = player
         self.assigned_role = assigned_role
-        if self.assigned_role not in player.possible_roles:
-            raise ValueError(f"Assigned role must be a possible role for the player! Got: {assigned_role} for {player}")
         ranking = player.ranking
-        self._score = ranking.primary_ranking if ranking.primary_role == assigned_role else ranking.secondary_ranking
+        self._score = ranking[assigned_role]
 
     @property
-    def score(self) -> int:
+    def score(self) -> float:
         return self._score
 
+    @property
+    def weighted_score(self) -> float:
+        if self.assigned_role == PlayerRole.QUEEN:
+            weight = 0.275
+        elif self.assigned_role == PlayerRole.SPEED:
+            weight = 0.25
+        elif self.assigned_role == PlayerRole.FLEX:
+            weight = 0.175
+        elif self.assigned_role == PlayerRole.OBJECTIVE:
+            weight = 0.125
+        else:
+            weight = 1.0
+        return round(weight * self.score, 3)
+
     def __str__(self) -> str:
-        return f"player: {self.player.name}, assigned: {self.assigned_role.name}, score {self.score}."
+        return f"player: {self.player.name} {self.assigned_role.name}, score {self.score}."
 
     def __repr__(self) -> str:
         return str(self)
@@ -115,8 +108,12 @@ class Team:
         return players[0]
 
     @property
-    def total_score(self) -> int:
+    def total_score(self) -> float:
         return sum([p.score for p in self.players])
+
+    @property
+    def total_weighted_score(self) -> float:
+        return round(sum([p.weighted_score for p in self.players]), 3)
 
     @property
     def num_fills(self) -> int:
@@ -135,14 +132,14 @@ class Team:
             PlayerRole.QUEEN: "Queen",
             PlayerRole.SPEED: "Speed",
             PlayerRole.OBJECTIVE: "Obj  ",
-            PlayerRole.VANILLA: "Vanil",
+            PlayerRole.FLEX: "Flex ",
         }
         to_return = ""
         for p in [self._queen, self._speed, self._objective, *self._other_players]:
             to_return += f"{role_to_print[p.assigned_role]}: {p.player.name}, {p.score}\n"
         if self._num_fills > 0:
             to_return += f"Fills: {self._num_fills} required\n"
-        to_return += f"Total score: {self.total_score}\n"
+        to_return += f"Total score: {self.total_score}, weighted: {self.total_weighted_score}\n"
         return to_return
 
     def __repr__(self) -> str:
