@@ -53,7 +53,7 @@ def cli(file_path: str) -> None:
         if t.needs_fill:
             possible_fills = find_fills(t, all_players, finalized_score)
             print(f"For team {t.team_name}, possible fills: {possible_fills}")
-            subsample = random.sample(possible_fills, 2)
+            subsample = random.sample(possible_fills, min(len(possible_fills), 2))
             print(f"Randomly chosen two fills: {subsample}")
 
 

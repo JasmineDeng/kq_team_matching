@@ -1,6 +1,6 @@
 import math
 import random
-from typing import Dict, List, NamedTuple, Optional, Set, Tuple
+from typing import Callable, Dict, List, NamedTuple, Optional, Set, Tuple
 
 from src.data_types import BasePlayerAssignment, Player, PlayerAssignment, PlayerRole, Team
 from src.sampling import PlayerSamplingStrategy, sample_players
@@ -42,10 +42,46 @@ def _sort_by_score_fn(assigned_player: BasePlayerAssignment) -> Tuple[float, flo
     return assigned_player.weighted_score, random.random()
 
 
+def _get_sort_by_role_score_fn(role: PlayerRole) -> Callable[[Player], float]:
+    def _sort_fn(player: Player) -> float:
+        return player.ranking[role]
+
+    return _sort_fn
+
+
+def _player_to_names(players: List[Player]) -> List[str]:
+    return [p.name for p in players]
+
+
+def _make_missing_players_error_string(
+    player_role: PlayerRole, num_teams: int, selected_players: List[Player], all_players: List[Player]
+) -> str:
+    num_missing = num_teams - len(selected_players)
+    current_player_names = _player_to_names(selected_players)
+    strongest_players = sorted(
+        [p for p in all_players if p.name not in current_player_names],
+        key=_get_sort_by_role_score_fn(role=player_role),
+        reverse=True,
+    )
+    strongest_players_str = ", ".join(
+        [f"{p.name} ({player_role.name}={p.ranking[player_role]})" for p in strongest_players[:num_missing]]
+    )
+    return (
+        f"Role {player_role} is not allowed to have fills, please manually assign more people! Selected: "
+        f"{', '.join(current_player_names)}, need {num_missing} more player(s).\n"
+        f"Maybe assign: {strongest_players_str}?"
+    )
+
+
 def _remove_subset_from_players(all_players: List[Player], to_remove: List[PlayerAssignment]) -> List[Player]:
     to_remove_names = {p.player.name for p in to_remove}
     to_return = [p for p in all_players if p.name not in to_remove_names]
     return to_return
+
+
+def _role_allows_fill(role: PlayerRole) -> bool:
+    """Only flex is allowed to have fills."""
+    return role == PlayerRole.FLEX
 
 
 def _players_to_assignment(players: List[Player], role: PlayerRole) -> List[PlayerAssignment]:
@@ -126,14 +162,21 @@ def _compute_ideal_score_for_group(
 def _assign_players_with_exclusion_set(
     player_groups: List[_PlayerGroup], possible_players: List[Player], role: PlayerRole, exclusion_set: List[Set[str]]
 ) -> List[PlayerAssignment]:
-    # The selected players for the role are reverse sorted, highest->lowest and we group the players by
-    # the position in the list. E.g., strongest player is added to weakest group, and weakest player is
-    # assigned to the strongest group.
-    # However, since we have an exclusion set, we actually assign players to exclusion sets first, to avoid
-    # assigning possibly the players we need to satisfy the constraint elsewhere. To avoid imbalancing, for
-    # each team with an exclusion set, we have an 'ideal score' that the player should satisfy.
-    # For non-exclusion-set teams, assignment goes as normal, where we sample players and assign the
-    # highest->lowest and vice versa.
+    """Assign players to teams, accounting for the exclusion set.
+
+    The selected players for the role are reverse sorted, highest->lowest, and we group the players by
+    the position in the list. E.g., the strongest player is added to the weakest group, and weakest player is
+    assigned to the strongest group.
+
+    However, since we have an exclusion set, we actually assign players to exclusion sets first, to avoid
+    assigning possibly the players we need to satisfy the constraint elsewhere. To avoid imbalancing, for
+    each team with an exclusion set, we have an 'ideal score' that the player should satisfy.
+
+    For non-exclusion-set teams, assignment goes as normal, where we sample players and assign the
+    highest->lowest and vice versa.
+
+    Returns the set of players that were assigned, so they can be removed from further assignment consideration.
+    """
     player_groups = sorted(player_groups, key=_sort_by_score_fn)
     assigned_players = []
 
@@ -169,14 +212,18 @@ def _assign_players_with_exclusion_set(
         assigned_players.append(assignment)
         possible_players = _remove_subset_from_players(possible_players, [assignment])
         print(
-            f"Excluding {exclude_group.to_exclude}, picked player {assignment} for team {exclude_group.group}, ideal score: {ideal_score}"
+            f"Excluding {exclude_group.to_exclude}, picked player {assignment} for team {exclude_group.group}, "
+            f"ideal score: {ideal_score}"
         )
 
     players_to_assign = sample_players(
         PlayerSamplingStrategy.PRIORITIZE_HIGHEST_SCORE, possible_players, len(groups_without_exclusion), role
     )
     players_to_assign = sorted(players_to_assign, key=_sort_by_score_fn, reverse=True)
-    print(f"Picked player {players_to_assign} of expected {len(groups_without_exclusion)} from {possible_players}")
+    print(
+        f"Picked player {players_to_assign} of expected {len(groups_without_exclusion)} from "
+        f"{_player_to_names(possible_players)}"
+    )
     for ind, assignment in enumerate(players_to_assign):
         groups_without_exclusion[ind].players.append(assignment)
         assigned_players.append(assignment)
@@ -184,7 +231,7 @@ def _assign_players_with_exclusion_set(
 
 
 def assign_players_to_teams(players: Set[Player], exclusion_set: List[Set[str]]) -> List[Team]:
-    # Find the minimum number of teams required. At most we have 1 fill per team.
+    # Find the minimum number of teams required.
     total_teams = math.ceil(len(players) / 5)
 
     # assign roles to the teams in this order
@@ -214,6 +261,10 @@ def assign_players_to_teams(players: Set[Player], exclusion_set: List[Set[str]])
         # if you can play speed, you can flex
         valid_roles = {player_role} if player_role != PlayerRole.FLEX else {PlayerRole.FLEX, PlayerRole.SPEED}
         current_subset = [player for player in players_to_select if player.primary_role in valid_roles]
+        # We require queen/obj/speed to be assigned, raise and add helpful messages to assign more people.
+        if len(current_subset) < total_teams and not _role_allows_fill(player_role):
+            error_str = _make_missing_players_error_string(player_role, total_teams, current_subset, players_to_select)
+            raise ValueError(error_str)
         assigned_players = _assign_players_with_exclusion_set(player_groups, current_subset, player_role, exclusion_set)
         players_to_select = _remove_subset_from_players(players_to_select, assigned_players)
 

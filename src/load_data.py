@@ -111,6 +111,9 @@ def load_attendance(csv_path: str, player_info: Dict[str, Player]) -> Set[Player
             elif is_obj == "1":
                 current_player.primary_role = PlayerRole.OBJECTIVE
             elif current_player.primary_role == PlayerRole.QUEEN or current_player.primary_role == PlayerRole.OBJECTIVE:
+                print(
+                    f"Player {current_player.name} had role {current_player.primary_role} but those must be hand-selected. Setting player to FLEX."
+                )
                 current_player.primary_role = PlayerRole.FLEX
 
             players.add(current_player)
