@@ -1,5 +1,7 @@
 from typing import Set
 
+import pytest
+
 from src.assignment import assign_players_to_teams
 from src.data_types import Player, PlayerRole, Team
 
@@ -54,10 +56,16 @@ def test_allows_flex_fills() -> None:
         _player_one_role("A", PlayerRole.QUEEN, 10),
         _player_one_role("B", PlayerRole.SPEED, 10),
         _player_one_role("C", PlayerRole.OBJECTIVE, 10),
+        _player_one_role("D", PlayerRole.FLEX, 10),
         # Team 2
         _player_one_role("E", PlayerRole.QUEEN, 8),
-        _player_one_role("F", PlayerRole.SPEED, 8),
-        _player_one_role("H", PlayerRole.OBJECTIVE, 8),
+        _player_one_role("F", PlayerRole.OBJECTIVE, 8),
     }
+    with pytest.raises(ValueError):
+        assign_players_to_teams(all_players, [])
+
+    all_players.add(
+        _player_one_role("H", PlayerRole.SPEED, 8),
+    )
     teams = assign_players_to_teams(all_players, [])
     assert len(teams) == 2
