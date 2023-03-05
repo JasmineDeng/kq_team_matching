@@ -53,6 +53,26 @@ def _player_to_names(players: List[Player]) -> List[str]:
     return [p.name for p in players]
 
 
+def _make_missing_players_error_string(
+    player_role: PlayerRole, num_teams: int, selected_players: List[Player], all_players: List[Player]
+) -> str:
+    num_missing = num_teams - len(selected_players)
+    current_player_names = _player_to_names(selected_players)
+    strongest_players = sorted(
+        [p for p in all_players if p.name not in current_player_names],
+        key=_get_sort_by_role_score_fn(role=player_role),
+        reverse=True,
+    )
+    strongest_players_str = ", ".join(
+        [f"{p.name} ({player_role.name}={p.ranking[player_role]})" for p in strongest_players[:num_missing]]
+    )
+    return (
+        f"Role {player_role} is not allowed to have fills, please manually assign more people! Selected: "
+        f"{', '.join(current_player_names)}, need {num_missing} more player(s).\n"
+        f"Maybe assign: {strongest_players_str}?"
+    )
+
+
 def _remove_subset_from_players(all_players: List[Player], to_remove: List[PlayerAssignment]) -> List[Player]:
     to_remove_names = {p.player.name for p in to_remove}
     to_return = [p for p in all_players if p.name not in to_remove_names]
@@ -201,7 +221,8 @@ def _assign_players_with_exclusion_set(
     )
     players_to_assign = sorted(players_to_assign, key=_sort_by_score_fn, reverse=True)
     print(
-        f"Picked player {players_to_assign} of expected {len(groups_without_exclusion)} from {_player_to_names(possible_players)}"
+        f"Picked player {players_to_assign} of expected {len(groups_without_exclusion)} from "
+        f"{_player_to_names(possible_players)}"
     )
     for ind, assignment in enumerate(players_to_assign):
         groups_without_exclusion[ind].players.append(assignment)
@@ -242,21 +263,8 @@ def assign_players_to_teams(players: Set[Player], exclusion_set: List[Set[str]])
         current_subset = [player for player in players_to_select if player.primary_role in valid_roles]
         # We require queen/obj/speed to be assigned, raise and add helpful messages to assign more people.
         if len(current_subset) < total_teams and not _role_allows_fill(player_role):
-            num_missing = total_teams - len(current_subset)
-            current_player_names = _player_to_names(current_subset)
-            strongest_players = sorted(
-                [p for p in players_to_select if p.name not in current_player_names],
-                key=_get_sort_by_role_score_fn(role=player_role),
-                reverse=True,
-            )
-            strongest_players_str = ", ".join(
-                [f"{p.name} ({player_role.name}={p.ranking[player_role]})" for p in strongest_players[:num_missing]]
-            )
-            raise ValueError(
-                f"Role {player_role} is not allowed to have fills, please manually assign more people! Selected: "
-                f"{', '.join(current_player_names)}, need {num_missing} more player(s).\n"
-                f"Maybe assign: {strongest_players_str}?"
-            )
+            error_str = _make_missing_players_error_string(player_role, total_teams, current_subset, players_to_select)
+            raise ValueError(error_str)
         assigned_players = _assign_players_with_exclusion_set(player_groups, current_subset, player_role, exclusion_set)
         players_to_select = _remove_subset_from_players(players_to_select, assigned_players)
 
