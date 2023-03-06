@@ -9,5 +9,5 @@ If you do not have Python3.11, visit https://www.python.org/downloads/macos/ to 
 
 To do a player assignment, after setting up and entering the virtualenv, enter the `kq_team_matching/src` directory and run:
 ```commandline
-python main.py -f data/test_data.csv
+python main.py assign -f data/test_data.csv
 ```
