@@ -1,7 +1,8 @@
 import math
 from typing import List, Set
 
-from src.data_types import Player, PlayerAssignment, PlayerRole, Team, clip_value
+from src.data_types.player import Player, PlayerAssignment, PlayerRole, clip_value
+from src.data_types.team import Team
 
 
 def find_fills(team: Team, all_players: Set[Player], ideal_score: float) -> List[str]:

@@ -1,7 +1,7 @@
 import csv
 from typing import Dict, List, Optional, Set
 
-from src.data_types import Player, PlayerRole
+from src.data_types.player import Player, PlayerRole
 
 NAME_ALIASES: List[Set[str]] = [
     {"Matt", "Matthew", "Matt Wu"},

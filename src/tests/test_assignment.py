@@ -3,7 +3,8 @@ from typing import Set
 import pytest
 
 from src.assignment import assign_players_to_teams
-from src.data_types import Player, PlayerRole, Team
+from src.data_types.player import Player, PlayerRole
+from src.data_types.team import Team
 
 
 def _player_one_role(name: str, player_role: PlayerRole, ranking: int) -> Player:
