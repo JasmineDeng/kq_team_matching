@@ -2,7 +2,7 @@ import enum
 import random
 from typing import List, Tuple
 
-from src.data_types import Player, PlayerAssignment, PlayerRole
+from src.data_types.player import Player, PlayerAssignment, PlayerRole
 
 
 class PlayerSamplingStrategy(enum.Enum):

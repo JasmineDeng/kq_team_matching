@@ -1,4 +1,4 @@
-from src.data_types import Player, PlayerRole
+from src.data_types.player import Player, PlayerRole
 from src.sampling import _sample_players_by_highest_score, _sample_players_by_preferred_role
 
 

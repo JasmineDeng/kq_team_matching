@@ -2,7 +2,8 @@ import math
 import random
 from typing import Callable, Dict, List, NamedTuple, Optional, Set, Tuple
 
-from src.data_types import BasePlayerAssignment, Player, PlayerAssignment, PlayerRole, Team
+from src.data_types.player import BasePlayerAssignment, Player, PlayerAssignment, PlayerRole
+from src.data_types.team import TEAM_COMPOSITION, Team
 from src.sampling import PlayerSamplingStrategy, sample_players
 
 
@@ -86,21 +87,6 @@ def _role_allows_fill(role: PlayerRole) -> bool:
 
 def _players_to_assignment(players: List[Player], role: PlayerRole) -> List[PlayerAssignment]:
     return [PlayerAssignment(player=p, assigned_role=role) for p in players]
-
-
-def _players_to_primary_role_assignment(players: List[Player]) -> List[PlayerAssignment]:
-    """Create player assignments where players are assigned their primary role, UNLESS that role is queen.
-
-    This method should be used to assign 'fills' for any arbitrary role for a created team, which should already
-    have a queen.
-    """
-    to_return = []
-    for p in players:
-        if p.primary_role == PlayerRole.QUEEN:
-            to_return.append(PlayerAssignment(player=p, assigned_role=PlayerRole.FLEX))
-        else:
-            to_return.append(PlayerAssignment(player=p, assigned_role=p.primary_role))
-    return to_return
 
 
 def _get_match_exclusion_set_players(
@@ -237,39 +223,38 @@ def assign_players_to_teams(players: Set[Player], exclusion_set: List[Set[str]])
     # assign roles to the teams in this order
     # after each step, the scores are ideally approximately the same.
     players_to_select = list(players)
+    player_groups: Optional[List[_PlayerGroup]] = None
 
-    # Find all the queens first
-    players_for_role = sample_players(
-        PlayerSamplingStrategy.PRIORITIZE_PREFERRED_ROLE, players_to_select, total_teams, PlayerRole.QUEEN
-    )
-    players_to_select = _remove_subset_from_players(players_to_select, players_for_role)
-
-    print(f"Got players for role {PlayerRole.QUEEN}: {players_for_role}")
-    player_groups: List[_PlayerGroup] = sorted(
-        [_PlayerGroup([elem]) for elem in players_for_role],
-        key=_sort_by_score_fn,
-    )
-
-    for player_role in [
-        PlayerRole.SPEED,
-        PlayerRole.FLEX,
-        PlayerRole.FLEX,
-        PlayerRole.OBJECTIVE,
-    ]:
+    for player_role in TEAM_COMPOSITION:
         print(f"groups: {player_groups}")
 
         # if you can play speed, you can flex
         valid_roles = {player_role} if player_role != PlayerRole.FLEX else {PlayerRole.FLEX, PlayerRole.SPEED}
-        current_subset = [player for player in players_to_select if player.primary_role in valid_roles]
+        players_for_role = [player for player in players_to_select if player.primary_role in valid_roles]
         # We require queen/obj/speed to be assigned, raise and add helpful messages to assign more people.
-        if len(current_subset) < total_teams and not _role_allows_fill(player_role):
-            error_str = _make_missing_players_error_string(player_role, total_teams, current_subset, players_to_select)
+        if len(players_for_role) < total_teams and not _role_allows_fill(player_role):
+            error_str = _make_missing_players_error_string(
+                player_role, total_teams, players_for_role, players_to_select
+            )
             raise ValueError(error_str)
-        assigned_players = _assign_players_with_exclusion_set(player_groups, current_subset, player_role, exclusion_set)
-        players_to_select = _remove_subset_from_players(players_to_select, assigned_players)
+
+        # If none, we are selecting for the first role
+        if player_groups is None:
+            primary_role_assignments = [p.to_primary_role_assignment() for p in players_for_role]
+            player_groups = sorted(
+                [_PlayerGroup([elem]) for elem in primary_role_assignments],
+                key=_sort_by_score_fn,
+            )
+            players_to_select = _remove_subset_from_players(players_to_select, primary_role_assignments)
+        else:
+            assigned_players = _assign_players_with_exclusion_set(
+                player_groups, players_for_role, player_role, exclusion_set
+            )
+            players_to_select = _remove_subset_from_players(players_to_select, assigned_players)
 
     if len(players_to_select) > 0:
         raise ValueError(f"Some people were not assigned! like: {players_to_select}")
 
+    assert player_groups is not None
     teams = [Team(group.players) for group in player_groups]
     return teams

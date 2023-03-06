@@ -3,6 +3,7 @@ import random
 import click
 
 from src.assignment import PlayerSamplingStrategy, assign_players_to_teams
+from src.data_types.team import roles_to_average_score, total_score_for_ranking, weighted_score_for_ranking
 from src.find_fills import find_fills
 from src.load_data import load_attendance, load_data, load_exclusion_set
 
@@ -39,6 +40,10 @@ def cli(file_path: str) -> None:
             summary_str += ", "
     print(f"All scores (in order): {summary_str}")
     print(f"All weighted scores (in order): {[t.total_weighted_score for t in teams]}")
+
+    averages = roles_to_average_score(all_players)
+    print(f"Summed average: {total_score_for_ranking(averages)}")
+    print(f"Summed weighted average: {weighted_score_for_ranking(averages)}")
 
     finalized_team_scores = [t.total_score for t in teams if not t.needs_fill]
     all_team_scores = [t.total_score for t in teams]
