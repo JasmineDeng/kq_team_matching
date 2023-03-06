@@ -6,13 +6,19 @@ from src.assignment import PlayerSamplingStrategy, assign_players_to_teams
 from src.data_types.team import roles_to_average_score, total_score_for_ranking, weighted_score_for_ranking
 from src.find_fills import find_fills
 from src.load_data import load_attendance, load_data, load_exclusion_set
+from src.visualization.scores import primary_role_score_histogram
 
 
 def _to_player_sampling_enum(_, __, value: str) -> PlayerSamplingStrategy:
     return PlayerSamplingStrategy[value]
 
 
-@click.command()
+@click.group()
+def cli() -> None:
+    ...
+
+
+@cli.command("assign")
 @click.option(
     "--file-path",
     "-f",
@@ -20,7 +26,7 @@ def _to_player_sampling_enum(_, __, value: str) -> PlayerSamplingStrategy:
     required=True,
     help="File path to csv file with player rankings.",
 )
-def cli(file_path: str) -> None:
+def assign(file_path: str) -> None:
     player_infos = load_data(file_path)
     all_names = set(player_infos.keys())
     all_players = load_attendance("data/attendance.csv", player_infos)
@@ -60,6 +66,20 @@ def cli(file_path: str) -> None:
             print(f"For team {t.team_name}, possible fills: {possible_fills}")
             subsample = random.sample(possible_fills, min(len(possible_fills), 2))
             print(f"Randomly chosen two fills: {subsample}")
+
+
+@cli.command("vis-scores")
+@click.option(
+    "--file-path",
+    "-f",
+    type=str,
+    required=True,
+    help="File path to csv file with player rankings.",
+)
+def vis_scores(file_path: str) -> None:
+    player_infos = load_data(file_path)
+    all_players = load_attendance("data/attendance.csv", player_infos)
+    primary_role_score_histogram(all_players)
 
 
 if __name__ == "__main__":
