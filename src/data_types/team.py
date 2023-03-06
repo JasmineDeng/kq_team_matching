@@ -21,12 +21,12 @@ def roles_to_average_score(all_players: Set[Player]) -> Dict[PlayerRole, float]:
 
 def weighted_score_for_ranking(ranking: Dict[PlayerRole, float]) -> float:
     score_list = [Player.weighted_score_for_role(role, ranking[role]) for role in TEAM_COMPOSITION]
-    return round(sum(score_list) / len(score_list), 2)
+    return round(sum(score_list), 2)
 
 
 def total_score_for_ranking(ranking: Dict[PlayerRole, float]) -> float:
     score_list = [ranking[role] for role in TEAM_COMPOSITION]
-    return round(sum(score_list) / len(score_list), 2)
+    return round(sum(score_list), 2)
 
 
 class Team:
