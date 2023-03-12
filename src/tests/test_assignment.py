@@ -17,6 +17,20 @@ def _team_to_player_names(team: Team) -> Set[str]:
     return {p.player.name for p in team.players}
 
 
+def test_happy_assignment() -> None:
+    all_players = {
+        # Team 1
+        _player_one_role("A", PlayerRole.QUEEN, 5),
+        _player_one_role("B", PlayerRole.SPEED, 5),
+        _player_one_role("C", PlayerRole.OBJECTIVE, 5),
+        _player_one_role("D", PlayerRole.FLEX, 5),
+        _player_one_role("E", PlayerRole.FLEX, 5),
+    }
+    teams = assign_players_to_teams(all_players, [], [])
+    assert len(teams) == 1
+    assert set({p.player.name for p in teams[0].players}) == {"A", "B", "C", "D", "E"}
+
+
 def test_exclusion_assign_players_to_teams() -> None:
     all_players = {
         # Team 1
@@ -30,7 +44,7 @@ def test_exclusion_assign_players_to_teams() -> None:
         _player_one_role("G", PlayerRole.FLEX, 5),
         _player_one_role("H", PlayerRole.OBJECTIVE, 5),
     }
-    teams = assign_players_to_teams(all_players, [])
+    teams = assign_players_to_teams(all_players, [], [])
     assert len(teams) == 2
     # Sort by team name (queen name)
     teams.sort(key=lambda team: team.team_name)
@@ -39,7 +53,7 @@ def test_exclusion_assign_players_to_teams() -> None:
     team_player_names = _team_to_player_names(teams[1])
     assert "E" in team_player_names and "B" in team_player_names
 
-    teams = assign_players_to_teams(all_players, [{"A", "F"}])
+    teams = assign_players_to_teams(all_players, [], [{"A", "F"}])
     assert len(teams) == 2
     # Sort by team name (queen name)
     teams.sort(key=lambda team: team.team_name)
@@ -63,10 +77,10 @@ def test_allows_flex_fills() -> None:
         _player_one_role("F", PlayerRole.OBJECTIVE, 8),
     }
     with pytest.raises(ValueError):
-        assign_players_to_teams(all_players, [])
+        assign_players_to_teams(all_players, [], [])
 
     all_players.add(
         _player_one_role("H", PlayerRole.SPEED, 8),
     )
-    teams = assign_players_to_teams(all_players, [])
+    teams = assign_players_to_teams(all_players, [], [])
     assert len(teams) == 2

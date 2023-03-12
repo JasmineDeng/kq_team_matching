@@ -82,7 +82,7 @@ class PlayerAssignment(BasePlayerAssignment):
         return self.player.weighted_score_for_role(self.assigned_role, self.score)
 
     def __str__(self) -> str:
-        return f"player: {self.player.name} {self.assigned_role.name}, score {self.score}."
+        return f"player: {self.player.name} {self.assigned_role.name}, weighted {self.weighted_score}."
 
     def __repr__(self) -> str:
         return str(self)

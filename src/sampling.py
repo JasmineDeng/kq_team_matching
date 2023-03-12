@@ -1,4 +1,5 @@
 import enum
+import math
 import random
 from typing import List, Tuple
 
@@ -11,6 +12,7 @@ class PlayerSamplingStrategy(enum.Enum):
     PRIORITIZE_PREFERRED_ROLE = 0
     PRIORITIZE_HIGHEST_SCORE = 1
     ONLY_PREFERRED_ROLE = 2
+    UNIFORM_SCORE = 3
 
 
 def _sort_fn_role_priority(
@@ -69,6 +71,27 @@ def _sample_players_only_preferred_role(
     return primary_players
 
 
+def _sample_players_uniform(players: List[Player], num_required: int, role: PlayerRole) -> List[PlayerAssignment]:
+    all_players = [PlayerAssignment(player=p, assigned_role=role) for p in players]
+    all_players = sorted(all_players, key=lambda p: p.score)
+    stride = math.ceil(len(all_players) / num_required)
+    to_return = []
+    # Represent 'strides' to step through the list
+    ind = 0
+    starting_ind = 0
+    for _ in range(num_required):
+        to_return.append(all_players[ind])
+        ind += stride
+        # If we've exceeded the length, reset, but *not* to the same starting index to ensure we sample
+        # WITHOUT replacement
+        if ind >= len(all_players):
+            starting_ind += 1
+            if starting_ind == stride and len(to_return) != num_required:
+                return to_return
+            ind = starting_ind
+    return to_return
+
+
 def sample_players(
     player_sampling_strategy: PlayerSamplingStrategy, players: List[Player], num_required: int, role: PlayerRole
 ) -> List[PlayerAssignment]:
@@ -78,4 +101,6 @@ def sample_players(
         return _sample_players_by_highest_score(players, num_required, role)
     elif player_sampling_strategy == PlayerSamplingStrategy.ONLY_PREFERRED_ROLE:
         return _sample_players_only_preferred_role(players, num_required, role)
+    elif player_sampling_strategy == PlayerSamplingStrategy.UNIFORM_SCORE:
+        return _sample_players_uniform(players, num_required, role)
     raise NotImplementedError(f"No sampling strategy defined for enum: {player_sampling_strategy}")
