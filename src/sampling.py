@@ -31,7 +31,7 @@ def _sample_players_by_highest_score(
     This method selects the players for the role with the highest score. Ties are broken if the role is a person's
     primary role, but the primary role is mostly ignored.
     """
-    all_players = [PlayerAssignment(player=p, assigned_role=role) for p in players]
+    all_players = [p.to_primary_role_assignment() for p in players if p.primary_role == role]
     # We must sort this reversed since we want to select the strongest players. Players with the role as their primary
     # role have [1] in the second element, so they will also be prioritized via tie break.
     all_players.sort(key=_sort_fn_role_priority, reverse=True)
