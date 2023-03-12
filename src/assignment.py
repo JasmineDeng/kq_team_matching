@@ -137,6 +137,14 @@ def _remove_subset_from_players(all_players: List[Player], to_remove: List[Playe
     return to_return
 
 
+def _remove_subset_from_assignments(
+    all_assignments: List[PlayerAssignment], to_remove: List[PlayerAssignment]
+) -> List[PlayerAssignment]:
+    to_remove_names = {p.player.name for p in to_remove}
+    to_return = [p for p in all_assignments if p.player.name not in to_remove_names]
+    return to_return
+
+
 def _role_allows_fill(role: PlayerRole) -> bool:
     """Only flex is allowed to have fills."""
     return role == PlayerRole.FLEX
@@ -163,19 +171,17 @@ def _get_match_exclusion_set_players(
 
 
 def _get_player_for_ideal_score(
-    players: List[Player],
-    role: PlayerRole,
+    player_assignments: List[PlayerAssignment],
     ideal_score: float,
     to_exclude: Optional[Set[str]] = None,
 ) -> Optional[PlayerAssignment]:
     """Get a player with the given role, not in the exclusion set, with a score as close as possible to the ideal."""
     if to_exclude is not None:
-        players_minus_exclusion = [player for player in players if player.name not in to_exclude]
+        players_minus_exclusion = [player for player in player_assignments if player.player.name not in to_exclude]
     else:
-        players_minus_exclusion = players
-    player_assignments = [PlayerAssignment(player=player, assigned_role=role) for player in players_minus_exclusion]
+        players_minus_exclusion = player_assignments
     # Get as close to the ideal score as possible
-    sorted_players = sorted(player_assignments, key=lambda p: abs(ideal_score - p.weighted_score))
+    sorted_players = sorted(players_minus_exclusion, key=lambda p: abs(ideal_score - p.weighted_score))
     if len(sorted_players) == 0:
         return None
     return sorted_players[0]
@@ -219,7 +225,6 @@ def _compute_ideal_score_for_group(
     for group in groups:
         score = average_set_group_score - group.weighted_score_excluding_role(role)
         ideal_scores[group] = score
-    print(list(ideal_scores.values()))
     return ideal_scores
 
 
@@ -272,12 +277,17 @@ def _assign_players_with_exclusion_set(
         raise ValueError(
             f"Failed to find ideal scores given {possible_players} and role {role} with {len(groups_to_assign)} groups"
         )
+    sampled_players = sample_players(
+        PlayerSamplingStrategy.UNIFORM_SCORE,
+        possible_players,
+        len(groups_with_exclusion) + len(groups_without_exclusion),
+        role,
+    )
     # Assign the teams with excluded people first
     for exclude_group in groups_with_exclusion:
         ideal_score = ideal_scores[exclude_group.group]
         assignment = _get_player_for_ideal_score(
-            possible_players,
-            role,
+            sampled_players,
             ideal_score,
             to_exclude=exclude_group.to_exclude,
         )
@@ -286,28 +296,20 @@ def _assign_players_with_exclusion_set(
             continue
         exclude_group.group.players.append(assignment)
         assigned_players.append(assignment)
-        possible_players = _remove_subset_from_players(possible_players, [assignment])
+        sampled_players = _remove_subset_from_assignments(sampled_players, [assignment])
         print(
             f"Excluding {exclude_group.to_exclude}, picked {assignment} for team {exclude_group.group}, "
             f"ideal score: {ideal_score}"
         )
 
-    players_to_assign = sample_players(
-        PlayerSamplingStrategy.UNIFORM_SCORE, possible_players, len(groups_without_exclusion), role
-    )
-    players_to_assign = sorted(players_to_assign, key=_sort_by_score_fn, reverse=True)
-    print(
-        f"Picked player {players_to_assign} of expected {len(groups_without_exclusion)} from "
-        f"{_player_to_names(possible_players)}"
-    )
     for group in groups_without_exclusion:
-        player = _get_player_for_ideal_score(possible_players, role, ideal_scores[group])
+        player = _get_player_for_ideal_score(sampled_players, ideal_scores[group])
         print(f"picked {player} for ideal score {ideal_scores[group]}, role {role}, group {group}")
         if player is None:
             continue
         group.players.append(player)
         assigned_players.append(player)
-        possible_players = _remove_subset_from_players(possible_players, [player])
+        sampled_players = _remove_subset_from_assignments(sampled_players, [player])
     return assigned_players
 
 

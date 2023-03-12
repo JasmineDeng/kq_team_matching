@@ -72,8 +72,8 @@ def _sample_players_only_preferred_role(
 
 
 def _sample_players_uniform(players: List[Player], num_required: int, role: PlayerRole) -> List[PlayerAssignment]:
-    all_players = [PlayerAssignment(player=p, assigned_role=role) for p in players]
-    all_players = sorted(all_players, key=lambda p: p.score)
+    all_players = [p.to_primary_role_assignment() for p in players if p.primary_role == role]
+    all_players = sorted(all_players, key=lambda p: p.score, reverse=True)
     stride = math.ceil(len(all_players) / num_required)
     to_return = []
     # Represent 'strides' to step through the list
