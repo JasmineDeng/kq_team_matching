@@ -191,7 +191,7 @@ def _compute_ideal_score_for_group(
     groups_to_skip: List[_PlayerGroup],
     players: List[Player],
     role: PlayerRole,
-    role_average: float,
+    team_average_score: float,
 ) -> Optional[Dict[_PlayerGroup, float]]:
     """Compute the ideal score for the group, given remaining players.
 
@@ -217,7 +217,7 @@ def _compute_ideal_score_for_group(
     # These are the groups to skip, aka they have assigned someone for the role and their scores are set.
     set_group_scores = [group.weighted_score for group in groups_to_skip]
     average_set_group_score = (
-        sum(set_group_scores) / len(set_group_scores) if len(set_group_scores) > 0 else role_average
+        sum(set_group_scores) / len(set_group_scores) if len(set_group_scores) > 0 else team_average_score
     )
 
     ideal_scores = {}
@@ -275,7 +275,11 @@ def _assign_players_with_exclusion_set(
 
     # Find the ideal score that the player should have
     ideal_scores = _compute_ideal_score_for_group(
-        groups_to_assign, groups_to_skip, possible_players, role, role_averages[role]
+        groups_to_assign,
+        groups_to_skip,
+        possible_players,
+        role,
+        TeamComposition.weighted_score_for_ranking(role_averages),
     )
     if ideal_scores is None:
         raise ValueError(
