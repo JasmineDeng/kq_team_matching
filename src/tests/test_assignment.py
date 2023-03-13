@@ -3,7 +3,7 @@ from typing import Set
 import pytest
 
 from src.assignment import assign_players_to_teams
-from src.data_types.player import Player, PlayerRole
+from src.data_types.player import Player, PlayerAssignment, PlayerRole
 from src.data_types.team import Team
 
 
@@ -31,7 +31,7 @@ def test_happy_assignment() -> None:
     assert set({p.player.name for p in teams[0].players}) == {"A", "B", "C", "D", "E"}
 
 
-def test_exclusion_assign_players_to_teams() -> None:
+def test_exclusion_set() -> None:
     all_players = {
         # Team 1
         _player_one_role("A", PlayerRole.QUEEN, 5),
@@ -84,3 +84,39 @@ def test_allows_flex_fills() -> None:
     )
     teams = assign_players_to_teams(all_players, [], [])
     assert len(teams) == 2
+
+
+def test_inclusion_set() -> None:
+    b_player = _player_one_role("B", PlayerRole.FLEX, 10)
+    c_player = _player_one_role("C", PlayerRole.OBJECTIVE, 10)
+    all_players = {
+        # Team 1
+        _player_one_role("A", PlayerRole.QUEEN, 5),
+        _player_one_role("I", PlayerRole.SPEED, 5),
+        b_player,
+        c_player,
+        _player_one_role("D", PlayerRole.FLEX, 5),
+        # Team 2
+        _player_one_role("E", PlayerRole.QUEEN, 4),
+        _player_one_role("F", PlayerRole.SPEED, 4),
+        _player_one_role("G", PlayerRole.FLEX, 5),
+        _player_one_role("H", PlayerRole.OBJECTIVE, 5),
+    }
+    inclusion_set = [[PlayerAssignment(b_player, PlayerRole.FLEX), PlayerAssignment(c_player, PlayerRole.FLEX)]]
+    # Not enough objective/speed players
+    with pytest.raises(ValueError):
+        assign_players_to_teams(all_players, inclusion_set, [])
+    inclusion_set = [[PlayerAssignment(b_player, PlayerRole.FLEX), PlayerAssignment(c_player, PlayerRole.OBJECTIVE)]]
+    teams = assign_players_to_teams(all_players, [], [])
+    # Sort by team name (queen name)
+    teams.sort(key=lambda team: team.team_name)
+    team_player_names = _team_to_player_names(teams[0])
+    assert "C" in team_player_names and "B" not in team_player_names
+    team_player_names = _team_to_player_names(teams[1])
+    assert "C" not in team_player_names and "B" in team_player_names
+
+    teams = assign_players_to_teams(all_players, inclusion_set, [])
+    teams.sort(key=lambda team: team.team_name)
+    # should be on the second team since the second team has the weaker queen
+    team_player_names = _team_to_player_names(teams[1])
+    assert "C" in team_player_names and "B" in team_player_names
