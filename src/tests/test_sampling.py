@@ -1,5 +1,5 @@
 from src.data_types.player import Player, PlayerRole
-from src.sampling import _sample_players_by_highest_score, _sample_players_by_preferred_role
+from src.sampling import _sample_players_by_highest_score, _sample_players_by_preferred_role, _sample_players_uniform
 
 
 def test_sample_players_by_highest_score() -> None:
@@ -61,3 +61,14 @@ def test_sample_players_by_preferred_role() -> None:
     assert len(assignments) == 1
     assert assignments[0].assigned_role == PlayerRole.OBJECTIVE
     assert assignments[0].player.name == "B"
+
+
+def _get_flex_player(name: str, score: int) -> Player:
+    return Player(name, PlayerRole.FLEX, {PlayerRole.FLEX: score})
+
+
+def test_sample_players_uniformly() -> None:
+    players = [_get_flex_player(str(i), i + 1) for i in range(10)]
+    sampled_players = _sample_players_uniform(players, 6, PlayerRole.FLEX)
+    scores = [p.score for p in sampled_players]
+    assert set(scores) == {1, 3, 5, 7, 9, 2}

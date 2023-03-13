@@ -1,12 +1,7 @@
+from collections import defaultdict
 from typing import Dict, List, Set
 
 from src.data_types.player import Player, PlayerAssignment, PlayerRole
-
-TEAM_COMPOSITION = [PlayerRole.QUEEN, PlayerRole.SPEED, PlayerRole.FLEX, PlayerRole.FLEX, PlayerRole.OBJECTIVE]
-"""Expected typical team composition.
-
-The order DOES MATTER because this is the order we assign player roles to the teams.
-"""
 
 
 def roles_to_average_score(all_players: Set[Player]) -> Dict[PlayerRole, float]:
@@ -19,26 +14,53 @@ def roles_to_average_score(all_players: Set[Player]) -> Dict[PlayerRole, float]:
     return to_return
 
 
-def weighted_score_for_ranking(ranking: Dict[PlayerRole, float]) -> float:
-    score_list = [Player.weighted_score_for_role(role, ranking[role]) for role in TEAM_COMPOSITION]
-    return round(sum(score_list), 2)
+class TeamComposition:
 
+    roles: List[PlayerRole] = [
+        PlayerRole.QUEEN,
+        PlayerRole.SPEED,
+        PlayerRole.FLEX,
+        PlayerRole.FLEX,
+        PlayerRole.OBJECTIVE,
+    ]
 
-def total_score_for_ranking(ranking: Dict[PlayerRole, float]) -> float:
-    score_list = [ranking[role] for role in TEAM_COMPOSITION]
-    return round(sum(score_list), 2)
+    @classmethod
+    def total_score_for_ranking(cls, ranking: Dict[PlayerRole, float]) -> float:
+        score_list = [ranking[role] for role in cls.roles]
+        return round(sum(score_list), 2)
+
+    @classmethod
+    def weighted_score_for_ranking(cls, ranking: Dict[PlayerRole, float]) -> float:
+        score_list = [Player.weighted_score_for_role(role, ranking[role]) for role in cls.roles]
+        return round(sum(score_list), 2)
+
+    @classmethod
+    def validate_team(cls, team: List[PlayerAssignment], allow_missing: bool = False) -> None:
+        expected_counts: Dict[PlayerRole, float] = defaultdict(int)
+        for role in cls.roles:
+            expected_counts[role] += 1
+
+        team_counts: Dict[PlayerRole, float] = defaultdict(int)
+        for player in team:
+            team_counts[player.assigned_role] += 1
+        team_player_diff: Dict[PlayerRole, float] = {
+            role: team_counts[role] - expected_counts[role] for role in expected_counts
+        }
+        err_str = ""
+        for role, diff in team_player_diff.items():
+            if (not allow_missing and diff != 0) or (allow_missing and diff > 0):
+                err_str += f"Should have had {expected_counts[role]} players {role.name} but got {team_counts[role]}!\n"
+        if err_str:
+            err_str += f"Team players: {[p.player.name for p in team]}"
+            raise ValueError(err_str)
 
 
 class Team:
     def __init__(self, players: List[PlayerAssignment]) -> None:
         self.players = players
-        self._team_composition = [
-            PlayerRole.QUEEN,
-            PlayerRole.OBJECTIVE,
-            PlayerRole.SPEED,
-            PlayerRole.FLEX,
-            PlayerRole.FLEX,
-        ]
+
+        TeamComposition.validate_team(self.players, allow_missing=True)
+
         self._queen = self._get_role(PlayerRole.QUEEN)
         self._speed = self._get_role(PlayerRole.SPEED)
         self._objective = self._get_role(PlayerRole.OBJECTIVE)
@@ -82,7 +104,7 @@ class Team:
     def team_name(self) -> str:
         return self._queen.player.name
 
-    def __str__(self) -> str:
+    def format(self, hide_scores: bool = False) -> str:
         role_to_print = {
             PlayerRole.QUEEN: "Queen",
             PlayerRole.SPEED: "Speed",
@@ -91,11 +113,18 @@ class Team:
         }
         to_return = ""
         for p in [self._queen, self._speed, self._objective, *self._flex_players]:
-            to_return += f"{role_to_print[p.assigned_role]}: {p.player.name}, {p.score}\n"
+            if hide_scores:
+                to_return += f"{role_to_print[p.assigned_role]}: {p.player.name}\n"
+            else:
+                to_return += f"{role_to_print[p.assigned_role]}: {p.player.name}, {p.score}\n"
         if self._num_fills > 0:
             to_return += f"Fills: {self._num_fills} required\n"
-        to_return += f"Total score: {self.total_score}, weighted: {self.total_weighted_score}\n"
+        if not hide_scores:
+            to_return += f"Total score: {self.total_score}, weighted: {self.total_weighted_score}\n"
         return to_return
+
+    def __str__(self) -> str:
+        return self.format()
 
     def __repr__(self) -> str:
         return str(self)
