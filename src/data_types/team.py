@@ -104,7 +104,7 @@ class Team:
     def team_name(self) -> str:
         return self._queen.player.name
 
-    def __str__(self) -> str:
+    def format(self, hide_scores: bool = False) -> str:
         role_to_print = {
             PlayerRole.QUEEN: "Queen",
             PlayerRole.SPEED: "Speed",
@@ -113,11 +113,18 @@ class Team:
         }
         to_return = ""
         for p in [self._queen, self._speed, self._objective, *self._flex_players]:
-            to_return += f"{role_to_print[p.assigned_role]}: {p.player.name}, {p.score}\n"
+            if hide_scores:
+                to_return += f"{role_to_print[p.assigned_role]}: {p.player.name}\n"
+            else:
+                to_return += f"{role_to_print[p.assigned_role]}: {p.player.name}, {p.score}\n"
         if self._num_fills > 0:
             to_return += f"Fills: {self._num_fills} required\n"
-        to_return += f"Total score: {self.total_score}, weighted: {self.total_weighted_score}\n"
+        if not hide_scores:
+            to_return += f"Total score: {self.total_score}, weighted: {self.total_weighted_score}\n"
         return to_return
+
+    def __str__(self) -> str:
+        return self.format()
 
     def __repr__(self) -> str:
         return str(self)

@@ -15,6 +15,17 @@ class PlayerSamplingStrategy(enum.Enum):
     UNIFORM_SCORE = 3
 
 
+def get_players_for_role(all_players: List[Player], role: PlayerRole) -> List[PlayerAssignment]:
+    # Implement the idea that speed can play flex, but other roles should remain static
+    if role == PlayerRole.FLEX:
+        return [
+            PlayerAssignment(player=p, assigned_role=role)
+            for p in all_players
+            if p.primary_role in {PlayerRole.FLEX, PlayerRole.SPEED}
+        ]
+    return [p.to_primary_role_assignment() for p in all_players if p.primary_role == role]
+
+
 def _sort_fn_role_priority(
     assigned_player: PlayerAssignment,
 ) -> Tuple[float, int, float]:
@@ -31,7 +42,7 @@ def _sample_players_by_highest_score(
     This method selects the players for the role with the highest score. Ties are broken if the role is a person's
     primary role, but the primary role is mostly ignored.
     """
-    all_players = [p.to_primary_role_assignment() for p in players if p.primary_role == role]
+    all_players = get_players_for_role(players, role)
     # We must sort this reversed since we want to select the strongest players. Players with the role as their primary
     # role have [1] in the second element, so they will also be prioritized via tie break.
     all_players.sort(key=_sort_fn_role_priority, reverse=True)
@@ -72,7 +83,7 @@ def _sample_players_only_preferred_role(
 
 
 def _sample_players_uniform(players: List[Player], num_required: int, role: PlayerRole) -> List[PlayerAssignment]:
-    all_players = [p.to_primary_role_assignment() for p in players if p.primary_role == role]
+    all_players = get_players_for_role(players, role)
     all_players = sorted(all_players, key=lambda p: p.score, reverse=True)
     stride = math.ceil(len(all_players) / num_required)
     to_return = []

@@ -68,6 +68,12 @@ def assign(file_path: str) -> None:
             subsample = random.sample(possible_fills, min(len(possible_fills), 2))
             print(f"Randomly chosen two fills: {subsample}")
 
+    # Print again, without scores
+    print("\n\n--------------------------\n\n")
+    print("Teams, without scores: \n")
+    for t in teams:
+        print(t.format(hide_scores=True))
+
 
 @cli.command("vis-scores")
 @click.option(
