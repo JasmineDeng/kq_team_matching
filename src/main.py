@@ -3,9 +3,9 @@ import random
 import click
 
 from src.assignment import PlayerSamplingStrategy, assign_players_to_teams
-from src.data_types.team import roles_to_average_score, total_score_for_ranking, weighted_score_for_ranking
+from src.data_types.team import TeamComposition, roles_to_average_score
 from src.find_fills import find_fills
-from src.load_data import load_attendance, load_data, load_exclusion_set
+from src.load_data import load_attendance, load_data, load_exclusion_set, load_inclusion_set
 from src.visualization.scores import primary_role_score_histogram
 
 
@@ -31,8 +31,9 @@ def assign(file_path: str) -> None:
     all_names = set(player_infos.keys())
     all_players = load_attendance("data/attendance.csv", player_infos)
 
+    inclusion_set = load_inclusion_set("data/inclusion_set.csv", player_infos)
     exclusion_set = load_exclusion_set("data/exclusion_set.csv", all_names)
-    teams = assign_players_to_teams(all_players, exclusion_set)
+    teams = assign_players_to_teams(all_players, inclusion_set, exclusion_set)
     teams = sorted(teams, key=lambda t: t.total_score)
     for t in teams:
         print(t)
@@ -48,8 +49,8 @@ def assign(file_path: str) -> None:
     print(f"All weighted scores (in order): {[t.total_weighted_score for t in teams]}")
 
     averages = roles_to_average_score(all_players)
-    print(f"Summed average: {total_score_for_ranking(averages)}")
-    print(f"Summed weighted average: {weighted_score_for_ranking(averages)}")
+    print(f"Summed average: {TeamComposition.total_score_for_ranking(averages)}")
+    print(f"Summed weighted average: {TeamComposition.weighted_score_for_ranking(averages)}")
 
     finalized_team_scores = [t.total_score for t in teams if not t.needs_fill]
     all_team_scores = [t.total_score for t in teams]
@@ -66,6 +67,12 @@ def assign(file_path: str) -> None:
             print(f"For team {t.team_name}, possible fills: {possible_fills}")
             subsample = random.sample(possible_fills, min(len(possible_fills), 2))
             print(f"Randomly chosen two fills: {subsample}")
+
+    # Print again, without scores
+    print("\n\n\n--------------------------\n\n\n")
+    print("Teams, without scores: \n")
+    for t in teams:
+        print(t.format(hide_scores=True))
 
 
 @cli.command("vis-scores")

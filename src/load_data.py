@@ -1,7 +1,8 @@
 import csv
 from typing import Dict, List, Optional, Set
 
-from src.data_types.player import Player, PlayerRole
+from src.data_types.player import Player, PlayerAssignment, PlayerRole
+from src.data_types.team import TeamComposition
 
 NAME_ALIASES: List[Set[str]] = [
     {"Matt", "Matthew", "Matt Wu"},
@@ -9,6 +10,7 @@ NAME_ALIASES: List[Set[str]] = [
     {"Maureen", "Mo"},
     {"Blee", "Brian Lee"},
     {"BrianM", "Brian M"},
+    {"DerekM", "Derek M"},
 ]
 """A list of aliases that people can be called by.
 
@@ -70,7 +72,7 @@ def load_data(csv_path: str) -> Dict[str, Player]:
             # convert values to floats
             float_ranking_dict = {key: _try_to_float(value) for key, value in ranking_dict.items()}
 
-            name = row["Name"]
+            name = row["name"]
             to_return[name.lower().strip()] = Player(
                 name=name,
                 primary_role=primary_role,
@@ -105,14 +107,15 @@ def load_attendance(csv_path: str, player_info: Dict[str, Player]) -> Set[Player
                 )
             # Set the role according to our hand selection
             if is_queen == "1" and is_obj == "1":
-                raise ValueError("Cannot be both queen and obj, pick one")
+                raise ValueError(f"Player {player_name} cannot be both queen and obj, pick one")
             elif is_queen == "1":
                 current_player.primary_role = PlayerRole.QUEEN
             elif is_obj == "1":
                 current_player.primary_role = PlayerRole.OBJECTIVE
             elif current_player.primary_role == PlayerRole.QUEEN or current_player.primary_role == PlayerRole.OBJECTIVE:
                 print(
-                    f"Player {current_player.name} had role {current_player.primary_role} but those must be hand-selected. Setting player to FLEX."
+                    f"Player {current_player.name} had role {current_player.primary_role} but those must be "
+                    f"hand-selected. Setting player to FLEX."
                 )
                 current_player.primary_role = PlayerRole.FLEX
 
@@ -134,5 +137,40 @@ def load_exclusion_set(csv_path: str, all_names: Set[str]) -> List[Set[str]]:
     return exclusion_set
 
 
+def load_inclusion_set(csv_path: str, player_info: Dict[str, Player]) -> List[List[PlayerAssignment]]:
+    inclusion_set = []
+
+    role_to_csv_title = {
+        PlayerRole.QUEEN: "Queen",
+        PlayerRole.SPEED: "Speed Warrior",
+        PlayerRole.OBJECTIVE: "Objective",
+        PlayerRole.FLEX: "Flex",
+    }
+    role_to_ind = {}
+    with open(csv_path, newline="") as csvfile:
+        reader = csv.reader(csvfile)
+        field_names = next(reader)
+        for role, title in role_to_csv_title.items():
+            role_to_ind[role] = [i for i, name in enumerate(field_names) if name == title]
+        for row in reader:
+            team = []
+            for role, ind_list in role_to_ind.items():
+                for ind in ind_list:
+                    name = row[ind]
+                    if not name:
+                        continue
+                    player = player_info[convert_alias_to_name(set(player_info.keys()), name)]
+                    if role != player.primary_role:
+                        print(
+                            f"Player {player.name} had primary role {player.primary_role.name} but because of inclusion set, role is now: {role.name}"
+                        )
+                    team.append(PlayerAssignment(player, assigned_role=role))
+            if team:
+                TeamComposition.validate_team(team, allow_missing=True)
+                inclusion_set.append(team)
+    return inclusion_set
+
+
 if __name__ == "__main__":
-    print(load_data("data/test_data.csv"))
+    players = load_data("data/test_data.csv")
+    print(load_inclusion_set("data/inclusion_set.csv", players))
