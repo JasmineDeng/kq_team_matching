@@ -69,7 +69,7 @@ def assign(file_path: str) -> None:
             print(f"Randomly chosen two fills: {subsample}")
 
     # Print again, without scores
-    print("\n\n--------------------------\n\n")
+    print("\n\n\n--------------------------\n\n\n")
     print("Teams, without scores: \n")
     for t in teams:
         print(t.format(hide_scores=True))
