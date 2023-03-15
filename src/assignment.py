@@ -1,6 +1,5 @@
 import math
 import random
-from collections import defaultdict
 from typing import Callable, Dict, List, NamedTuple, Optional, Set, Tuple
 
 from src.data_types.player import BasePlayerAssignment, Player, PlayerAssignment, PlayerRole
@@ -17,31 +16,13 @@ class _PlayerGroup(BasePlayerAssignment):
         self._role_averages = role_averages
 
     @property
-    def remaining_roles_required(self) -> List[PlayerRole]:
-        missing_roles = []
-        current_role_counts: Dict[PlayerRole, int] = defaultdict(int)
-        expected_role_counts: Dict[PlayerRole, int] = defaultdict(int)
-        for p in self.players:
-            current_role_counts[p.assigned_role] += 1
-        for role in TeamComposition.roles:
-            expected_role_counts[role] += 1
-        for role, count in expected_role_counts.items():
-            diff = count - current_role_counts[role]
-            if diff < 0:
-                raise ValueError(
-                    f"Should not be possible: team with players {self.players} has too many for role {role.name}, "
-                    f"should have at most {count} but has {current_role_counts[role]}"
-                )
-            if diff > 0:
-                missing_roles.extend([role] * diff)
-        return missing_roles
-
-    @property
     def score(self) -> float:
         # Score represents the players CURRENTLY on the team and the average scores of players NOT YET ASSIGNED
         # onto the team
         existing_score = sum(p.score for p in self.players)
-        average_scores = sum(self._role_averages[role] for role in self.remaining_roles_required)
+        average_scores = sum(
+            self._role_averages[role] for role in TeamComposition.remaining_roles_required(self.players)
+        )
         return existing_score + average_scores
 
     @property
@@ -50,18 +31,19 @@ class _PlayerGroup(BasePlayerAssignment):
         # onto the team
         existing_score = sum(p.weighted_score for p in self.players)
         average_scores = sum(
-            Player.weighted_score_for_role(role, self._role_averages[role]) for role in self.remaining_roles_required
+            Player.weighted_score_for_role(role, self._role_averages[role])
+            for role in TeamComposition.remaining_roles_required(self.players)
         )
         return round(existing_score + average_scores, 3)
 
     def weighted_score_excluding_role(self, role: PlayerRole) -> float:
-        if role not in self.remaining_roles_required:
+        remaining_roles_required = TeamComposition.remaining_roles_required(self.players)
+        if role not in remaining_roles_required:
             raise ValueError(
                 f"Cannot exclude role in score calculation for role that is needed on the team anymore,"
-                f" remaining: {self.remaining_roles_required}"
+                f" remaining: {remaining_roles_required}"
             )
         existing_score = sum(p.weighted_score for p in self.players)
-        remaining_roles_required = self.remaining_roles_required
         # will remove only the *first* instance of the role, which we want in case there are duplicate roles, ex. flex
         remaining_roles_required.remove(role)
         average_scores = sum(
@@ -343,10 +325,16 @@ def assign_players_to_teams(
     for player_role in TeamComposition.roles:
         # Some groups, because of the inclusion set, will already have a player assigned for this role.
         # In that case, we should skip it and not assign another player.
-        groups_to_skip = [group for group in player_groups if player_role not in group.remaining_roles_required]
+        groups_to_skip = [
+            group
+            for group in player_groups
+            if player_role not in TeamComposition.remaining_roles_required(group.players)
+        ]
         print(f"Assigning {player_role.name}, skipping groups: {groups_to_skip}")
         # Then remove them from the player group list
-        groups_to_assign = [group for group in player_groups if player_role in group.remaining_roles_required]
+        groups_to_assign = [
+            group for group in player_groups if player_role in TeamComposition.remaining_roles_required(group.players)
+        ]
         print(f"Assigning {player_role.name} for groups {groups_to_assign}")
 
         # if you can play speed, you can flex
