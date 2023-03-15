@@ -1,3 +1,4 @@
+from collections import defaultdict
 from typing import Dict
 
 import pytest
@@ -31,3 +32,19 @@ def test_team_composition() -> None:
     ]
     with pytest.raises(ValueError):
         TeamComposition.validate_team(team, allow_missing=True)
+
+
+def test_remaining_roles_remaining() -> None:
+    team = [
+        Player("A", primary_role=PlayerRole.QUEEN, ranking=_fake_ranking()).to_primary_role_assignment(),
+        Player("B", primary_role=PlayerRole.FLEX, ranking=_fake_ranking()).to_primary_role_assignment(),
+    ]
+    remaining_roles = TeamComposition.remaining_roles_required(team)
+    counts: Dict[PlayerRole, int] = defaultdict(int)
+    for role in remaining_roles:
+        counts[role] += 1
+    assert counts == {
+        PlayerRole.FLEX: 1,
+        PlayerRole.SPEED: 1,
+        PlayerRole.OBJECTIVE: 1,
+    }

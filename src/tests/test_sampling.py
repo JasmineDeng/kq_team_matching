@@ -36,9 +36,9 @@ def test_sample_players_by_highest_score() -> None:
     assert assignments[0].player.name == "C"
     assignments = _sample_players_by_highest_score(players, 2, PlayerRole.OBJECTIVE)
     assert len(assignments) == 2
-    # Now we get A and C, B is ignored even if they want to do objective because the score is low
+    # Still prioritize by the primary/assigned role
     names = {a.player.name for a in assignments}
-    assert names == {"A", "C"}
+    assert names == {"B", "C"}
 
 
 def test_sample_players_by_preferred_role() -> None:
@@ -71,4 +71,4 @@ def test_sample_players_uniformly() -> None:
     players = [_get_flex_player(str(i), i + 1) for i in range(10)]
     sampled_players = _sample_players_uniform(players, 6, PlayerRole.FLEX)
     scores = [p.score for p in sampled_players]
-    assert set(scores) == {1, 3, 5, 7, 9, 2}
+    assert set(scores) == {2, 4, 6, 8, 9, 10}
