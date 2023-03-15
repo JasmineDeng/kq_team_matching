@@ -1,5 +1,3 @@
-import random
-
 import click
 
 from src.assignment import PlayerSamplingStrategy, assign_players_to_teams
@@ -52,20 +50,11 @@ def assign(file_path: str) -> None:
     print(f"Summed average: {TeamComposition.total_score_for_ranking(averages)}")
     print(f"Summed weighted average: {TeamComposition.weighted_score_for_ranking(averages)}")
 
-    finalized_team_scores = [t.total_score for t in teams if not t.needs_fill]
-    all_team_scores = [t.total_score for t in teams]
-    # If no finalized teams, just aim for any average player, so long as they're all roughly equal in skill?
-    if len(finalized_team_scores) > 0:
-        finalized_score = sum(finalized_team_scores) / len(finalized_team_scores)
-    else:
-        print("No finalized teams, we can use any fill so long as the players are roughly equal in skill")
-        finalized_score = sum(all_team_scores) / len(all_team_scores) + 2.5
-
     for t in teams:
         if t.needs_fill:
-            possible_fills = find_fills(t, all_players, finalized_score)
+            possible_fills = find_fills(t, all_players, teams)
             print(f"For team {t.team_name}, possible fills: {possible_fills}")
-            subsample = random.sample(possible_fills, min(len(possible_fills), 2))
+            subsample = possible_fills[:2]
             print(f"Randomly chosen two fills: {subsample}")
 
     # Print again, without scores

@@ -1,29 +1,37 @@
-import math
 from typing import List, Set
 
-from src.data_types.player import Player, PlayerAssignment, PlayerRole, clip_value
-from src.data_types.team import Team
+from src.data_types.player import Player, PlayerAssignment, PlayerRole
+from src.data_types.team import Team, TeamComposition, roles_to_average_score
 
 
-def find_fills(team: Team, all_players: Set[Player], ideal_score: float) -> List[str]:
+def find_fills(team: Team, all_players: Set[Player], all_teams: List[Team]) -> List[PlayerAssignment]:
     """Find a fill, where we're aiming to hit the average score of finalized teams.
 
-    The fill is generally a range, and any kind of player can fill as flex.
+    We always assume that the fill is a FLEX player.
     """
-    score_diff = ideal_score - team.total_score
-    # Use a range for all the score differences to increase the chances of finding a fill.
-    if float(score_diff).is_integer():
-        scores_to_find = {score_diff}
+    remaining_roles = TeamComposition.remaining_roles_required(team.players)
+    if len(remaining_roles) == 0:
+        print(f"No fills needed for team {team.team_name}")
+        return []
+    if not all(role == PlayerRole.FLEX for role in remaining_roles):
+        raise ValueError(f"Can only fill FLEX right now. Remaining roles: {remaining_roles}")
+
+    all_weighted_scores = [t.total_weighted_score for t in all_teams if not t.needs_fill]
+    if len(all_weighted_scores) > 0:
+        average_weighted_score = sum(all_weighted_scores) / len(all_weighted_scores)
+        ideal_score = average_weighted_score - team.total_weighted_score
     else:
-        scores_to_find = {math.ceil(score_diff), math.floor(score_diff)}
-    scores_to_find = {clip_value(val) for val in scores_to_find}
+        # Set it to the average of the FLEX role
+        role_to_average_score = roles_to_average_score(all_players)
+        ideal_score = role_to_average_score[PlayerRole.FLEX]
+
     possible_players = []
     team_names = [p.player.name for p in team.players]
     for p in all_players:
         if p.name in team_names:
             continue
         # Always assume fills are flex
-        if p.ranking[PlayerRole.FLEX] in scores_to_find:
-            possible_players.append(PlayerAssignment(player=p, assigned_role=PlayerRole.FLEX))
-
-    return [f"{p.player.name} ({p.assigned_role.name[0]}) ({p.score})" for p in possible_players]
+        possible_players.append(PlayerAssignment(player=p, assigned_role=PlayerRole.FLEX))
+    possible_players.sort(key=lambda p: abs(ideal_score - p.weighted_score))
+    # arbitrary threshold, return at most 5 players
+    return possible_players[:5]
