@@ -2,7 +2,7 @@ from typing import Set
 
 import pytest
 
-from src.assignment import assign_players_to_teams
+from src.assignment import _contains_exclusion_set, assign_players_to_teams
 from src.data_types.player import Player, PlayerAssignment, PlayerRole
 from src.data_types.team import Team
 
@@ -15,6 +15,17 @@ def _player_one_role(name: str, player_role: PlayerRole, ranking: int) -> Player
 
 def _team_to_player_names(team: Team) -> Set[str]:
     return {p.player.name for p in team.players}
+
+
+def test_contains_exclusion_set() -> None:
+    players = [
+        _player_one_role("A", PlayerRole.QUEEN, 5),
+        _player_one_role("B", PlayerRole.SPEED, 5),
+        _player_one_role("C", PlayerRole.OBJECTIVE, 5),
+    ]
+    assert _contains_exclusion_set(set(players), [{"A", "B"}]) == {"A", "B"}
+    assert _contains_exclusion_set(set(players), [{"C", "D"}]) is None
+    assert _contains_exclusion_set(set(players), [{"A", "B"}, {"A", "C"}]) == {"A", "B"}
 
 
 def test_happy_assignment() -> None:
