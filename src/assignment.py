@@ -135,6 +135,16 @@ def _players_to_assignment(players: List[Player], role: PlayerRole) -> List[Play
     return [PlayerAssignment(player=p, assigned_role=role) for p in players]
 
 
+def _contains_exclusion_set(players: Set[Player], exclusion_set: List[Set[str]]) -> Optional[Set[str]]:
+    """Check if the set of players violates an exclusion set."""
+    players_to_check = {p.name.lower() for p in players}
+    for exclusion in exclusion_set:
+        exclusion_to_compare = {elem.lower() for elem in exclusion}
+        if exclusion_to_compare.issubset(players_to_check):
+            return exclusion
+    return None
+
+
 def _get_match_exclusion_set_players(
     all_players: List[Player], group: _PlayerGroup, exclusion_set: List[Set[str]]
 ) -> Set[str]:
@@ -142,12 +152,9 @@ def _get_match_exclusion_set_players(
     to_exclude: Set[str] = set()
     for player in all_players:
         # TODO this lower is kind of annoying maybe we should standardize somehow
-        possible_team = {p.player.name.lower() for p in group.players} | {player.name.lower()}
-        for exclusion in exclusion_set:
-            exclusion_to_compare = {elem.lower() for elem in exclusion}
-            if exclusion_to_compare.issubset(possible_team):
-                to_exclude.add(player.name)
-                break
+        possible_team = set([p.player for p in group.players] + [player])
+        if _contains_exclusion_set(possible_team, exclusion_set) is not None:
+            to_exclude.add(player.name)
     return to_exclude
 
 
@@ -242,6 +249,7 @@ def _assign_players_with_exclusion_set(
     groups_without_exclusion = []
     for group in groups_to_assign:
         group_exclusion_set = _get_match_exclusion_set_players(possible_players, group, exclusion_set)
+        print(f"Excluding {group_exclusion_set} for group {group}")
         if len(group_exclusion_set) > 0:
             groups_with_exclusion.append(_GroupWithExclusions(group=group, to_exclude=group_exclusion_set))
         else:
@@ -314,6 +322,9 @@ def assign_players_to_teams(
     players_to_select = list(players)
     # Remove the people in the inclusion set from the overall set
     for inclusion in inclusion_set:
+        excluded = _contains_exclusion_set({p.player for p in inclusion}, exclusion_set)
+        if excluded is not None:
+            raise ValueError(f"Can't assign teams when inclusion set: {inclusion} violates exclusion set: {excluded}")
         players_to_select = _remove_subset_from_players(players_to_select, inclusion)
 
     # Create the initial player groups, account for the inclusion set

@@ -31,6 +31,7 @@ def assign(file_path: str) -> None:
 
     inclusion_set = load_inclusion_set("data/inclusion_set.csv", player_infos)
     exclusion_set = load_exclusion_set("data/exclusion_set.csv", all_names)
+    print(f"Loaded exclusion set: {exclusion_set}")
     teams = assign_players_to_teams(all_players, inclusion_set, exclusion_set)
     teams = sorted(teams, key=lambda t: t.total_score)
     for t in teams:
