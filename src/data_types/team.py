@@ -30,7 +30,7 @@ class TeamComposition:
         counts: Dict[PlayerRole, int] = defaultdict(int)
         for role in cls.roles:
             counts[role] += 1
-        return [(role, counts[role]) for role in cls.roles]
+        return [(role, counts[role]) for role in counts]
 
     @classmethod
     def total_score_for_ranking(cls, ranking: Dict[PlayerRole, float]) -> float:

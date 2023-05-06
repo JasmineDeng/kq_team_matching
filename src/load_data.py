@@ -72,8 +72,8 @@ def load_data(csv_path: str) -> Dict[str, Player]:
             # convert values to floats
             float_ranking_dict = {key: _try_to_float(value) for key, value in ranking_dict.items()}
 
-            name = row["name"]
-            to_return[name.lower().strip()] = Player(
+            name = row["name"].strip()
+            to_return[name.lower()] = Player(
                 name=name,
                 primary_role=primary_role,
                 ranking=float_ranking_dict,
