@@ -1,36 +1,44 @@
 ,name,Primary Role,Secondary Role,,queen rank,flex rank,speed rank,objective rank
-,Chaz,Queen,flex,,7,5,6,4
+,Chaz,Queen,flex,,7,5,5,4
 ,Brad,flex,Objective,,1,3,3,3
-,Ryan,Speed,flex,,5,8,8,7
-,Ben,Speed,flex,,4,6,6,6
-,Dan,queen,flex,,7,7,6,6
-,Blee,speed,flex,,7.5,8,7,8
-,Josh,Queen,sped,,9,10,9.5,9
-,David,objective,flex,,1,3,2,5
-,Dray,speed,flex,,6.5,9,9,7
-,Felix,speed,flex,,4,8,7,7
+,Ryan,queen,flex,,6,8,8,7
+,Ben,Speed,flex,,3,3.5,3.5,3.5
+,Dan,queen,flex,,7,6,5,6
+,Blee,speed,flex,,8,8,8,9
+,Josh,speed,queen,,10,10,10,10
+,David,objective,flex,,1,3,2,4
+,Dray,speed,flex,,7,8.5,8.5,7
+,Felix,speed,flex,,4,6,6,7
 ,Coki,objective,flex,,1,3.5,4,5
 ,Brian M,speed,flex,,4,7,7,10
-,Jess,queen,objective,,6,7,6,7
-,Blue Chris,speed,queen,,5.5,9,8,7
-,Sam ,flex,speed,,4,8,7,9
+,Jess,queen,objective,,7,7,6,7
+,Blue Chris,speed,queen,,6,8,8,8
+,Sam,flex,flex,,4,7,6,9
 ,Charles,flex,objective,,2,4.5,4.5,4.5
-,Jasmine,objective,flex,,2,4,4,9
-,Matt,speed,flex,,6,8,10,8
-,Turese,objective,flex,,1,3,3,6
-,Steve,flex,speed,,4,9,8,5
-,Drew,speed,speed,,4.5,7,7,7
+,Jasmine,objective,flex,,2,3.5,3.5,9
+,Matt,speed,flex,,7,7,7,7
+,Turese,objective,flex,,1,4,3,6
+,Steve,speed,flex,,4,9,8,7
+,Drew,speed,speed,,6,6,6,6
 ,Keoni,flex,speed,,1,3,3,3
-,Mo,flex,objective,,2,3,4,5
+,Mo,flex,objective,,2,4,3,5
 ,Scott,speed,flex,,3,7,7,7
-,Reed,flex,speed,,3,6,6,6
-,Bryce,flex,objective,,4,5,4,4
+,Reed,flex,speed,,3,5,5,5
+,Bryce,flex,objective,,4,4,4,3
 ,Dylan,flex,objective,,1,2,2,2
 ,DerekM,flex,objective,,1,2,1,2
 ,Yash,flex,objective,,1,2,1,2
 ,Rebecca,flex,objective,,1,3,3,5
-,Mitch,speed,objective,,7,6,6,5
+,Mitch,speed,objective,,6,6,6,5
 ,Aaron,flex,objective,,1,2,2.5,2.5
-,ChrisK,speed,flex,,4.5,8,8,7
-,Jonathan,objective,flex,,2,2,2,2
-,Andrew,flex,objective,,1,1,1,2
+,ChrisK,speed,flex,,6,9,9,9
+,Jonathan,objective,flex,,2,3,3,3
+,Andrew,flex,objective,,1,2,2,2
+,Ryan Vile,speed,objective,,1,5,5,6
+,Kelly,flex,objective,,1,1,1,3
+,Mikio,speed,objective,,3,6,6,6
+,Mysto,flex,objective,,1,1,1,1
+,Gino,speed,speed,,5,7,7,7
+,Lisa,flex,objective,,1,1,1,1
+,Martin,flex,objective,,1,1,1,1
+,Ernesto,flex,objective,,1,1,1,1
