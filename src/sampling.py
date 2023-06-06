@@ -13,6 +13,7 @@ class PlayerSamplingStrategy(enum.Enum):
     PRIORITIZE_HIGHEST_SCORE = 1
     ONLY_PREFERRED_ROLE = 2
     UNIFORM_SCORE = 3
+    RANDOM = 4
 
 
 def get_players_for_role(all_players: List[Player], role: PlayerRole) -> List[PlayerAssignment]:
@@ -114,4 +115,9 @@ def sample_players(
         return _sample_players_only_preferred_role(players, num_required, role)
     elif player_sampling_strategy == PlayerSamplingStrategy.UNIFORM_SCORE:
         return _sample_players_uniform(players, num_required, role)
+    elif player_sampling_strategy == PlayerSamplingStrategy.RANDOM:
+        return [
+            PlayerAssignment(player=p, assigned_role=role)
+            for p in random.sample(players, min(len(players), num_required))
+        ]
     raise NotImplementedError(f"No sampling strategy defined for enum: {player_sampling_strategy}")

@@ -118,7 +118,7 @@ def test_inclusion_set() -> None:
     with pytest.raises(ValueError):
         assign_players_to_teams(all_players, inclusion_set, [])
     inclusion_set = [[PlayerAssignment(b_player, PlayerRole.FLEX), PlayerAssignment(c_player, PlayerRole.OBJECTIVE)]]
-    teams = assign_players_to_teams(all_players, [], [])
+    teams = assign_players_to_teams(all_players, [], [], use_uniform_sampling=True)
     # Sort by team name (queen name)
     teams.sort(key=lambda team: team.team_name)
     team_player_names = _team_to_player_names(teams[0])
@@ -126,7 +126,8 @@ def test_inclusion_set() -> None:
     team_player_names = _team_to_player_names(teams[1])
     assert "C" not in team_player_names and "B" in team_player_names
 
-    teams = assign_players_to_teams(all_players, inclusion_set, [])
+    # Disable random sampling so it is deterministic
+    teams = assign_players_to_teams(all_players, inclusion_set, [], use_uniform_sampling=True)
     teams.sort(key=lambda team: team.team_name)
     # should be on the second team since the second team has the weaker queen
     team_player_names = _team_to_player_names(teams[1])
