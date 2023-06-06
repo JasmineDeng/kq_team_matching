@@ -170,6 +170,7 @@ def _get_player_for_ideal_score(
         players_minus_exclusion = player_assignments
     # Get as close to the ideal score as possible
     sorted_players = sorted(players_minus_exclusion, key=lambda p: abs(ideal_score - p.weighted_score))
+    print([abs(ideal_score - p.weighted_score) for p in sorted_players])
     if len(sorted_players) == 0:
         return None
     return sorted_players[0]
@@ -223,6 +224,7 @@ def _assign_players_with_exclusion_set(
     role: PlayerRole,
     exclusion_set: List[Set[str]],
     role_averages: Dict[PlayerRole, float],
+    use_uniform_sampling: bool,
 ) -> List[PlayerAssignment]:
     """Assign players to teams, accounting for the exclusion set.
 
@@ -294,9 +296,10 @@ def _assign_players_with_exclusion_set(
             f"ideal score: {ideal_score}"
         )
 
-    sampled_players = sample_players(
-        PlayerSamplingStrategy.UNIFORM_SCORE, possible_players, len(groups_without_exclusion), role
+    sampling_strategy = (
+        PlayerSamplingStrategy.RANDOM if not use_uniform_sampling else PlayerSamplingStrategy.UNIFORM_SCORE
     )
+    sampled_players = sample_players(sampling_strategy, possible_players, len(groups_without_exclusion), role)
     # Anecdotally, it seems to work better to sort by the player scores in this order.
     sampled_players = sorted(sampled_players, key=_sort_by_score_fn)
     groups_without_exclusion = sorted(groups_without_exclusion, key=_sort_by_score_fn, reverse=True)
@@ -312,7 +315,10 @@ def _assign_players_with_exclusion_set(
 
 
 def assign_players_to_teams(
-    players: Set[Player], inclusion_set: List[List[PlayerAssignment]], exclusion_set: List[Set[str]]
+    players: Set[Player],
+    inclusion_set: List[List[PlayerAssignment]],
+    exclusion_set: List[Set[str]],
+    use_uniform_sampling: bool = False,
 ) -> List[Team]:
     # Find the minimum number of teams required.
     total_teams = math.ceil(len(players) / 5)
@@ -365,6 +371,7 @@ def assign_players_to_teams(
             player_role,
             exclusion_set,
             role_averages,
+            use_uniform_sampling,
         )
         players_to_select = _remove_subset_from_players(players_to_select, assigned_players)
 
