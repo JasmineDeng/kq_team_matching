@@ -202,6 +202,7 @@ def _compute_ideal_score_for_group(
     # If no possible players are found, the later code cannot find any either and will skip assignment (meaning we
     # need fills). But that will be handled later.
     if len(possible_players_pre_exclusion) == 0:
+        print(possible_players_pre_exclusion)
         return None
 
     # These are the groups to skip, aka they have assigned someone for the role and their scores are set.
@@ -295,6 +296,8 @@ def _assign_players_with_exclusion_set(
             f"Excluding {exclude_group.to_exclude}, picked {assignment} for team {exclude_group.group}, "
             f"ideal score: {ideal_score}"
         )
+    if len(groups_without_exclusion) == 0:
+        return assigned_players
 
     sampling_strategy = (
         PlayerSamplingStrategy.RANDOM if not use_uniform_sampling else PlayerSamplingStrategy.UNIFORM_SCORE
