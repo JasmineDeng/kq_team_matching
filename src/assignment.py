@@ -295,6 +295,8 @@ def _assign_players_with_exclusion_set(
             f"Excluding {exclude_group.to_exclude}, picked {assignment} for team {exclude_group.group}, "
             f"ideal score: {ideal_score}"
         )
+    if len(groups_without_exclusion) == 0:
+        return assigned_players
 
     sampling_strategy = (
         PlayerSamplingStrategy.RANDOM if not use_uniform_sampling else PlayerSamplingStrategy.UNIFORM_SCORE

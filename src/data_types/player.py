@@ -40,9 +40,9 @@ class Player:
         if role == PlayerRole.QUEEN:
             weight = 0.275
         elif role == PlayerRole.SPEED:
-            weight = 0.25
+            weight = 0.225
         elif role == PlayerRole.FLEX:
-            weight = 0.175
+            weight = 0.1875
         elif role == PlayerRole.OBJECTIVE:
             weight = 0.125
         else:
