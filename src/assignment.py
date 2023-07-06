@@ -202,7 +202,6 @@ def _compute_ideal_score_for_group(
     # If no possible players are found, the later code cannot find any either and will skip assignment (meaning we
     # need fills). But that will be handled later.
     if len(possible_players_pre_exclusion) == 0:
-        print(possible_players_pre_exclusion)
         return None
 
     # These are the groups to skip, aka they have assigned someone for the role and their scores are set.
