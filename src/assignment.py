@@ -126,6 +126,8 @@ def _validate_required_roles(
             add_help_str = (
                 f"{', '.join(_assignment_to_names(overriden_assignments_in_inclusion))} player(s) "
                 f"previously had role {required_role} but were overriden because they are in an inclusion set.\n"
+                if overriden_assignments_in_inclusion
+                else "No roles were overriden in an inclusion set."
             )
             diff = abs(len(total_assignments_for_role) - num_teams)
             inclusion_set_str = (
