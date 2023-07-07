@@ -52,6 +52,13 @@ class TeamComposition:
         return to_return
 
     @classmethod
+    def role_allows_fill(cls, role: PlayerRole) -> bool:
+        for metadata in cls.role_metadata():
+            if metadata.role == role:
+                return metadata.allows_fill
+        raise ValueError(f"Invalid role {role}, not in team composition {cls.roles}")
+
+    @classmethod
     def role_counts(cls) -> List[Tuple[PlayerRole, int]]:
         """Return a list of the role and the corresponding count in the same order as the roles list."""
         counts: Dict[PlayerRole, int] = defaultdict(int)
@@ -186,18 +193,8 @@ class Team:
         return str(self)
 
     def to_csv(self) -> list[list[str | float]]:
-        to_return = []
-        for player in reorder_players_for_team_composition(self.players):
-            to_return.append(
-                list(
-                    _SerializedTeamRow(
-                        name=player.player.name,
-                        score=str(player.score),
-                        role=player.assigned_role.name,
-                        weighted_score=str(player.weighted_score),
-                    )
-                )
-            )
+        serialized_rows = serialize_players_in_order(self.players)
+        to_return = [list(elem) for elem in serialized_rows]
         # Add weighted and total scores
         to_return.append(
             list(
@@ -214,16 +211,15 @@ class Team:
 
     @classmethod
     def from_csv(cls, csv_data: list[list[str | float]], players: list[Player]) -> "Team":
-        if len(csv_data) != cls.NUM_ROWS_SERIALIZED:
-            raise ValueError(
-                f"Expected {cls.NUM_ROWS_SERIALIZED} rows in csv, got {len(csv_data)}, raw data: {csv_data}"
-            )
-
         name_to_role = {}
         name_to_score = {}
         name_to_weighted_score = {}
-        for row in csv_data[: len(TeamComposition.roles)]:
+        for row in csv_data:
             team_row = _SerializedTeamRow(*row)
+            # Assume that these rows contain the total scores
+            if not team_row.role and not team_row.name:
+                logging.info(f"Found row: {row} that does not represent player. Stopping deserialization.")
+                break
 
             name_to_role[team_row.name] = PlayerRole[team_row.role]
             name_to_score[team_row.name] = float(team_row.score)
@@ -253,7 +249,7 @@ def write_teams_to_csv(output_file_name: str, teams: list[Team]) -> None:
             writer.writerow([])
 
 
-def reorder_players_for_team_composition(player_assignments: list[PlayerAssignment]) -> list[PlayerAssignment]:
+def serialize_players_in_order(player_assignments: list[PlayerAssignment]) -> list[_SerializedTeamRow]:
     """Reorder players so that the players are in the same order as the team composition.
 
     This is useful for when you want to compare the same players across different team compositions.
@@ -267,8 +263,21 @@ def reorder_players_for_team_composition(player_assignments: list[PlayerAssignme
 
     to_return = []
     for role in TeamComposition.roles:
-        person = role_to_assignments[role].pop()
-        to_return.append(person)
+        current_assignments = role_to_assignments[role]
+        if len(current_assignments) == 0 and not TeamComposition.role_allows_fill(role):
+            raise ValueError(f"Missing player for role {role}")
+        elif len(current_assignments) == 0:
+            to_return.append(_SerializedTeamRow(name="", role="", score="", weighted_score=""))
+        else:
+            assignment = current_assignments.pop()
+            to_return.append(
+                _SerializedTeamRow(
+                    name=assignment.player.name,
+                    role=assignment.assigned_role.name,
+                    score=str(assignment.score),
+                    weighted_score=str(assignment.weighted_score),
+                )
+            )
 
     # If anybody is left, then there are more players than the team composition allows.
     for role, assignments in role_to_assignments.items():
