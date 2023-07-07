@@ -181,7 +181,13 @@ class Team:
                 )
             )
         # Add weighted and total scores
-        to_return.append(["", "", self.total_score, self.total_weighted_score])
+        to_return.append(
+            list(
+                _SerializedTeamRow(
+                    name="", role="", score=str(self.total_score), weighted_score=str(self.total_weighted_score)
+                )
+            )
+        )
 
         # Assert the number of serialized rows is correct
         assert len(to_return) == self.NUM_ROWS_SERIALIZED
