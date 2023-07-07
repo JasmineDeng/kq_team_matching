@@ -123,16 +123,19 @@ def _validate_required_roles(
         if len(total_assignments_for_role) != num_teams:
             too_many_players = len(total_assignments_for_role) > num_teams
             help_str = "Remove" if too_many_players else "Add"
-            add_help_str = f"{', '.join(_assignment_to_names(overriden_assignments_in_inclusion))} player(s) previously had role {required_role} but were overriden because they are in an inclusion set.\n"
+            add_help_str = (
+                f"{', '.join(_assignment_to_names(overriden_assignments_in_inclusion))} player(s) "
+                f"previously had role {required_role} but were overriden because they are in an inclusion set.\n"
+            )
             diff = abs(len(total_assignments_for_role) - num_teams)
             inclusion_set_str = (
-                f"{', '.join(_assignment_to_names(assignments_in_inclusion))} player(s) are assigned in an inclusion set"
+                f"{', '.join(_assignment_to_names(assignments_in_inclusion))} player(s) are assigned to an inclusion set"
                 if assignments_in_inclusion
                 else "No one with that role is in an inclusion set"
             )
             raise ValueError(
-                f"For role {required_role}, there are {len(total_assignments_for_role)} player(s), but {num_teams} teams. "
-                f"{inclusion_set_str}, and in total, "
+                f"For role {required_role}, there are {len(total_assignments_for_role)} player(s), but {num_teams} "
+                f"teams. {inclusion_set_str}, and in total, "
                 f"we have: {', '.join(_assignment_to_names(total_assignments_for_role))} player(s).\n"
                 f"{add_help_str if not too_many_players else ''}"
                 f"{help_str} {diff} player(s) with role {required_role}."
