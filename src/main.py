@@ -1,14 +1,29 @@
+import csv
+import datetime
+import os
+
 import click
 
 from src.assignment import PlayerSamplingStrategy, assign_players_to_teams
-from src.data_types.team import TeamComposition, roles_to_average_score
+from src.cli_utils import prompt_yes_no
+from src.data_types.team import Team, TeamComposition, roles_to_average_score, write_teams_to_csv
 from src.find_fills import find_fills
 from src.load_data import load_attendance, load_data, load_exclusion_set, load_inclusion_set
 from src.visualization.scores import primary_role_score_histogram
 
+DATETIME_FORMAT = "%Y-%m-%d_%H:%M:%S"
+
 
 def _to_player_sampling_enum(_, __, value: str) -> PlayerSamplingStrategy:
     return PlayerSamplingStrategy[value]
+
+
+def _parse_datetime(value: str) -> datetime.datetime | None:
+    try:
+        no_ext_filename = value.rsplit(".")[0]
+        return datetime.datetime.strptime(no_ext_filename, DATETIME_FORMAT)
+    except Exception:
+        return None
 
 
 @click.group()
@@ -63,6 +78,50 @@ def assign(file_path: str) -> None:
     print("Teams, without scores: \n")
     for t in teams:
         print(t.format(hide_scores=True))
+
+    print("Save the teams to a csv?")
+    if prompt_yes_no():
+        date_str = datetime.datetime.now().strftime(DATETIME_FORMAT)
+        output_file_name = os.path.join(os.path.dirname(__file__), "data", "league_night", f"{date_str}.csv")
+        write_teams_to_csv(output_file_name, teams)
+
+
+@cli.command("recompute")
+@click.option("--ranking-file-path", "-r", type=str, required=True, help="File path to csv file with player rankings.")
+@click.option(
+    "--file-path",
+    "-f",
+    type=str,
+    default=None,
+    help="File path to csv file with teams. If None, take the most recent team from data/league_night.",
+)
+def recompute(ranking_file_path: str, file_path: str | None) -> None:
+    if file_path is None:
+        league_night_dir = os.path.join(os.path.dirname(__file__), "data", "league_night")
+        all_league_night_csvs = os.listdir(league_night_dir)
+        csv_dates = [csv_file for csv_file in all_league_night_csvs if _parse_datetime(csv_file) is not None]
+        file_path = os.path.join(os.path.dirname(__file__), "data", "league_night", sorted(csv_dates)[-1])
+
+    players = list(load_data(ranking_file_path).values())
+    teams = []
+
+    with open(file_path, "r") as f:
+        reader = csv.reader(f)
+        # Assume we go two rows at a time.
+        serialized_team = []
+        for row in reader:
+            if row:
+                serialized_team.append(row)
+            if len(serialized_team) == Team.NUM_ROWS_SERIALIZED:
+                teams.append(Team.from_csv(serialized_team, players))
+                serialized_team = []
+
+    for t in teams:
+        print(t)
+
+    print("Overwrite the existing file with new data? If no, then the current teams are not saved.")
+    if prompt_yes_no():
+        write_teams_to_csv(file_path, teams)
 
 
 @cli.command("vis-scores")

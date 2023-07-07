@@ -1,7 +1,16 @@
+import csv
+import logging
 from collections import defaultdict
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Dict, List, NamedTuple, Optional, Set, Tuple
 
 from src.data_types.player import Player, PlayerAssignment, PlayerRole
+
+
+class _SerializedTeamRow(NamedTuple):
+    role: str
+    name: str
+    score: str
+    weighted_score: str
 
 
 def roles_to_average_score(all_players: Set[Player]) -> Dict[PlayerRole, float]:
@@ -82,6 +91,13 @@ class TeamComposition:
 
 
 class Team:
+
+    NUM_ROWS_SERIALIZED = 6
+    """The number of CSV rows when the team is serialized.
+
+    Presently, we have one row for the player names and one row for the scores.
+    """
+
     def __init__(self, players: List[PlayerAssignment]) -> None:
         self.players = players
 
@@ -150,3 +166,91 @@ class Team:
 
     def __repr__(self) -> str:
         return str(self)
+
+    def to_csv(self) -> list[list[str | float]]:
+        to_return = []
+        for player in reorder_players_for_team_composition(self.players):
+            to_return.append(
+                list(
+                    _SerializedTeamRow(
+                        name=player.player.name,
+                        score=str(player.score),
+                        role=player.assigned_role.name,
+                        weighted_score=str(player.weighted_score),
+                    )
+                )
+            )
+        # Add weighted and total scores
+        to_return.append(["", "", self.total_score, self.total_weighted_score])
+
+        # Assert the number of serialized rows is correct
+        assert len(to_return) == self.NUM_ROWS_SERIALIZED
+
+        return to_return
+
+    @classmethod
+    def from_csv(cls, csv_data: list[list[str | float]], players: list[Player]) -> "Team":
+        if len(csv_data) != cls.NUM_ROWS_SERIALIZED:
+            raise ValueError(
+                f"Expected {cls.NUM_ROWS_SERIALIZED} rows in csv, got {len(csv_data)}, raw data: {csv_data}"
+            )
+
+        name_to_role = {}
+        name_to_score = {}
+        name_to_weighted_score = {}
+        for row in csv_data[: len(TeamComposition.roles)]:
+            team_row = _SerializedTeamRow(*row)
+
+            name_to_role[team_row.name] = PlayerRole[team_row.role]
+            name_to_score[team_row.name] = float(team_row.score)
+            name_to_weighted_score[team_row.name] = float(team_row.weighted_score)
+
+        team_players = []
+        for p in players:
+            if p.name in name_to_role:
+                player_role = name_to_role[p.name]
+                assignment = PlayerAssignment(player=p, assigned_role=player_role)
+                if (
+                    assignment.score != name_to_score[p.name]
+                    or assignment.weighted_score != name_to_weighted_score[p.name]
+                ):
+                    logging.warning(
+                        f"Score mismatch for player {p.name}, expected {name_to_score[p.name]}, weighted {name_to_weighted_score[p.name]}, but got {assignment.score}. Was their score updated?"
+                    )
+                team_players.append(assignment)
+        return cls(team_players)
+
+
+def write_teams_to_csv(output_file_name: str, teams: list[Team]) -> None:
+    with open(output_file_name, "w") as f:
+        writer = csv.writer(f)
+        for team in teams:
+            writer.writerows(team.to_csv())
+            writer.writerow([])
+
+
+def reorder_players_for_team_composition(player_assignments: list[PlayerAssignment]) -> list[PlayerAssignment]:
+    """Reorder players so that the players are in the same order as the team composition.
+
+    This is useful for when you want to compare the same players across different team compositions.
+    """
+    role_to_assignments = {role: [] for role in PlayerRole}
+    for p in player_assignments:
+        role_to_assignments[p.assigned_role].append(p)
+    # Sort by name so that the order is consistent
+    for role in role_to_assignments:
+        role_to_assignments[role].sort(key=lambda assignment: assignment.player.name)
+
+    to_return = []
+    for role in TeamComposition.roles:
+        person = role_to_assignments[role].pop()
+        to_return.append(person)
+
+    # If anybody is left, then there are more players than the team composition allows.
+    for role, assignments in role_to_assignments.items():
+        if len(assignments) > 0:
+            raise ValueError(
+                f"Too many players for team composition! Got {assignments} for role {role}, but expected {TeamComposition.roles}"
+            )
+
+    return to_return
