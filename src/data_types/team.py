@@ -25,6 +25,12 @@ class TeamComposition:
     ]
 
     @classmethod
+    def required_roles_no_fill(cls) -> List[PlayerRole]:
+        role_counts = cls.role_counts()
+        required_roles = [role for role, count in role_counts if count == 1]
+        return required_roles
+
+    @classmethod
     def role_counts(cls) -> List[Tuple[PlayerRole, int]]:
         """Return a list of the role and the corresponding count in the same order as the roles list."""
         counts: Dict[PlayerRole, int] = defaultdict(int)

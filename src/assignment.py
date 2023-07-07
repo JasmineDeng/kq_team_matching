@@ -83,33 +83,63 @@ def _player_to_names(players: List[Player]) -> List[str]:
     return [p.name for p in players]
 
 
-def _make_missing_players_error_string(
-    player_role: PlayerRole,
-    num_teams: int,
-    groups_to_skip: List[_PlayerGroup],
-    selected_players: List[Player],
-    all_players: List[Player],
-) -> str:
-    num_missing = num_teams - len(selected_players)
-    current_player_names = _player_to_names(selected_players)
-    strongest_players = sorted(
-        [p for p in all_players if p.name not in current_player_names],
-        key=_get_sort_by_role_score_fn(role=player_role),
-        reverse=True,
-    )
-    strongest_players_str = ", ".join(
-        [f"{p.name} ({player_role.name}={p.ranking[player_role]})" for p in strongest_players[:num_missing]]
-    )
-    assigned_players = [
-        player.player for group in groups_to_skip for player in group.players if player.assigned_role == player_role
-    ]
-    assigned_player_names = _player_to_names(assigned_players)
-    return (
-        f"Role {player_role} is not allowed to have fills, please manually assign more people! Selected: "
-        f"{', '.join(current_player_names)}.\n"
-        f"Player(s): {', '.join(assigned_player_names)} already assigned to a team (via inclusion set), need "
-        f"{num_missing} more player(s).\nMaybe assign: {strongest_players_str}?"
-    )
+def _assignment_to_names(assignments: list[PlayerAssignment]) -> List[str]:
+    return [a.player.name for a in assignments]
+
+
+def _validate_required_roles(
+    num_teams: int, total_players: list[Player], inclusion_set: list[list[PlayerAssignment]]
+) -> None:
+    """Validate that for each role that does not allow fills, we have enough players.
+
+    Create and print a helpful error string that will indicate who was assigned the role, if they are in an inclusion
+    set, or if they were assigned the role but that role was removed due to being in an inclusion set.
+    """
+    all_inclusion_set_names = _assignment_to_names(sum(inclusion_set, []))
+    for required_role in TeamComposition.required_roles_no_fill():
+        # Get the number of players in this role in an inclusion set.
+        assignments_in_inclusion = []
+        overriden_assignments_in_inclusion = []
+        for player_assignment_list in inclusion_set:
+            assignments = [p for p in player_assignment_list if p.assigned_role == required_role]
+            assignments_in_inclusion.extend(assignments)
+            # Get the players who had the primary role as the required role, but it was overriden in the inclusion set.
+            overriden_assignments = [
+                p
+                for p in player_assignment_list
+                if p.player.primary_role == required_role and p.assigned_role != required_role
+            ]
+            overriden_assignments_in_inclusion.extend(overriden_assignments)
+
+        assignments_for_role = get_players_for_role(total_players, required_role)
+        # These are all players for the role who are *not* on an inclusion set. We must remove players in inclusion
+        # sets and check that separately, since the inclusion set role overrides the default role.
+        filtered_assignments_for_inclusion = [
+            assignment for assignment in assignments_for_role if assignment.player.name not in all_inclusion_set_names
+        ]
+        # These are all the players with the assigned role, whether or not they are in an inclusion set.
+        total_assignments_for_role = filtered_assignments_for_inclusion + assignments_in_inclusion
+
+        if len(total_assignments_for_role) != num_teams:
+            too_many_players = len(total_assignments_for_role) > num_teams
+            help_str = "Remove" if too_many_players else "Add"
+            add_help_str = (
+                f"{', '.join(_assignment_to_names(overriden_assignments_in_inclusion))} player(s) "
+                f"previously had role {required_role} but were overriden because they are in an inclusion set.\n"
+            )
+            diff = abs(len(total_assignments_for_role) - num_teams)
+            inclusion_set_str = (
+                f"{', '.join(_assignment_to_names(assignments_in_inclusion))} player(s) are assigned to an inclusion set"
+                if assignments_in_inclusion
+                else "No one with that role is in an inclusion set"
+            )
+            raise ValueError(
+                f"For role {required_role}, there are {len(total_assignments_for_role)} player(s), but {num_teams} "
+                f"teams. {inclusion_set_str}, and in total, "
+                f"we have: {', '.join(_assignment_to_names(total_assignments_for_role))} player(s).\n"
+                f"{add_help_str if not too_many_players else ''}"
+                f"{help_str} {diff} player(s) with role {required_role}."
+            )
 
 
 def _remove_subset_from_players(all_players: List[Player], to_remove: List[PlayerAssignment]) -> List[Player]:
@@ -124,11 +154,6 @@ def _remove_subset_from_assignments(
     to_remove_names = {p.player.name for p in to_remove}
     to_return = [p for p in all_assignments if p.player.name not in to_remove_names]
     return to_return
-
-
-def _role_allows_fill(role: PlayerRole) -> bool:
-    """Only flex is allowed to have fills."""
-    return role == PlayerRole.FLEX
 
 
 def _players_to_assignment(players: List[Player], role: PlayerRole) -> List[PlayerAssignment]:
@@ -328,12 +353,15 @@ def assign_players_to_teams(
     # Get the averages per role
     role_averages = roles_to_average_score(players)
     players_to_select = list(players)
-    # Remove the people in the inclusion set from the overall set
+    # Remove the people in the inclusion set from the overall set, and also check it does not violate the exclusion set.
     for inclusion in inclusion_set:
         excluded = _contains_exclusion_set({p.player for p in inclusion}, exclusion_set)
         if excluded is not None:
             raise ValueError(f"Can't assign teams when inclusion set: {inclusion} violates exclusion set: {excluded}")
         players_to_select = _remove_subset_from_players(players_to_select, inclusion)
+
+    # Validate that all the roles that do not allow fills are satisfied.
+    _validate_required_roles(total_teams, players_to_select, inclusion_set)
 
     # Create the initial player groups, account for the inclusion set
     num_empty_teams = total_teams - len(inclusion_set)
@@ -359,12 +387,6 @@ def assign_players_to_teams(
         # if you can play speed, you can flex
         valid_roles = {player_role} if player_role != PlayerRole.FLEX else {PlayerRole.FLEX, PlayerRole.SPEED}
         players_for_role = [player for player in players_to_select if player.primary_role in valid_roles]
-        # We require queen/obj/speed to be assigned, raise and add helpful messages to assign more people.
-        if len(players_for_role) < len(groups_to_assign) and not _role_allows_fill(player_role):
-            error_str = _make_missing_players_error_string(
-                player_role, len(groups_to_assign), groups_to_skip, players_for_role, players_to_select
-            )
-            raise ValueError(error_str)
 
         assigned_players = _assign_players_with_exclusion_set(
             groups_to_assign,

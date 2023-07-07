@@ -113,10 +113,15 @@ def test_inclusion_set() -> None:
         _player_one_role("G", PlayerRole.FLEX, 5),
         _player_one_role("H", PlayerRole.OBJECTIVE, 5),
     }
-    inclusion_set = [[PlayerAssignment(b_player, PlayerRole.FLEX), PlayerAssignment(c_player, PlayerRole.FLEX)]]
     # Not enough objective/speed players
+    inclusion_set = [[PlayerAssignment(b_player, PlayerRole.FLEX), PlayerAssignment(c_player, PlayerRole.FLEX)]]
     with pytest.raises(ValueError):
         assign_players_to_teams(all_players, inclusion_set, [])
+    # Too many objective/speed players
+    inclusion_set = [[PlayerAssignment(b_player, PlayerRole.SPEED), PlayerAssignment(c_player, PlayerRole.OBJECTIVE)]]
+    with pytest.raises(ValueError):
+        assign_players_to_teams(all_players, inclusion_set, [])
+
     inclusion_set = [[PlayerAssignment(b_player, PlayerRole.FLEX), PlayerAssignment(c_player, PlayerRole.OBJECTIVE)]]
     teams = assign_players_to_teams(all_players, [], [], use_uniform_sampling=True)
     # Sort by team name (queen name)
