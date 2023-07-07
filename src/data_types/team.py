@@ -77,21 +77,21 @@ class TeamComposition:
         return round(sum(score_list), 2)
 
     @classmethod
-    def validate_team(cls, team: List[PlayerAssignment], allow_missing: bool = False) -> None:
-        expected_counts: Dict[PlayerRole, float] = defaultdict(int)
-        for role in cls.roles:
-            expected_counts[role] += 1
+    def validate_team(cls, team: List[PlayerAssignment]) -> None:
+        role_counts = {role: count for role, count in cls.role_counts()}
+        role_to_metadata = {metadata.role: metadata for metadata in cls.role_metadata()}
 
         team_counts: Dict[PlayerRole, float] = defaultdict(int)
         for player in team:
             team_counts[player.assigned_role] += 1
         team_player_diff: Dict[PlayerRole, float] = {
-            role: team_counts[role] - expected_counts[role] for role in expected_counts
+            role: team_counts[role] - role_counts[role] for role in role_counts
         }
         err_str = ""
         for role, diff in team_player_diff.items():
-            if (not allow_missing and diff != 0) or (allow_missing and diff > 0):
-                err_str += f"Should have had {expected_counts[role]} players {role.name} but got {team_counts[role]}!\n"
+            allows_fill = role_to_metadata[role].allows_fill
+            if (not allows_fill and diff != 0) or (allows_fill and diff > 0):
+                err_str += f"Should have had {role_counts[role]} players {role.name} but got {team_counts[role]}!\n"
         if err_str:
             err_str += f"Team players: {[p.player.name for p in team]}"
             raise ValueError(err_str)
@@ -126,7 +126,7 @@ class Team:
     def __init__(self, players: List[PlayerAssignment]) -> None:
         self.players = players
 
-        TeamComposition.validate_team(self.players, allow_missing=True)
+        TeamComposition.validate_team(self.players)
 
         self._queen = self._get_role(PlayerRole.QUEEN)
         self._speed = self._get_role(PlayerRole.SPEED)
