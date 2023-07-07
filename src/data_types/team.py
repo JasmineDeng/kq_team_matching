@@ -1,7 +1,13 @@
 from collections import defaultdict
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Dict, List, NamedTuple, Optional, Set, Tuple
 
 from src.data_types.player import Player, PlayerAssignment, PlayerRole
+
+
+class PlayerRoleMetadata(NamedTuple):
+    role: PlayerRole
+    allows_fill: bool
+    requires_exact_count: bool
 
 
 def roles_to_average_score(all_players: Set[Player]) -> Dict[PlayerRole, float]:
@@ -25,10 +31,16 @@ class TeamComposition:
     ]
 
     @classmethod
-    def required_roles_no_fill(cls) -> List[PlayerRole]:
-        role_counts = cls.role_counts()
-        required_roles = [role for role, count in role_counts if count == 1]
-        return required_roles
+    def role_metadata(cls) -> List[PlayerRoleMetadata]:
+        to_return = [
+            PlayerRoleMetadata(role=PlayerRole.QUEEN, allows_fill=False, requires_exact_count=True),
+            PlayerRoleMetadata(role=PlayerRole.SPEED, allows_fill=False, requires_exact_count=False),
+            PlayerRoleMetadata(role=PlayerRole.FLEX, allows_fill=True, requires_exact_count=False),
+            PlayerRoleMetadata(role=PlayerRole.OBJECTIVE, allows_fill=False, requires_exact_count=True),
+        ]
+        roles_to_return = [val.role for val in to_return]
+        assert all(role in cls.roles for role in roles_to_return)
+        return to_return
 
     @classmethod
     def role_counts(cls) -> List[Tuple[PlayerRole, int]]:
