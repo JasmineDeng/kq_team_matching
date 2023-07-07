@@ -34,6 +34,10 @@ def test_team_composition() -> None:
         TeamComposition.validate_team(team, allow_missing=True)
 
 
+def test_required_roles_no_fill() -> None:
+    assert TeamComposition.required_roles_no_fill() == [PlayerRole.QUEEN, PlayerRole.SPEED, PlayerRole.OBJECTIVE]
+
+
 def test_remaining_roles_remaining() -> None:
     team = [
         Player("A", primary_role=PlayerRole.QUEEN, ranking=_fake_ranking()).to_primary_role_assignment(),
