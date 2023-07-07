@@ -117,10 +117,17 @@ def test_inclusion_set() -> None:
     inclusion_set = [[PlayerAssignment(b_player, PlayerRole.FLEX), PlayerAssignment(c_player, PlayerRole.FLEX)]]
     with pytest.raises(ValueError):
         assign_players_to_teams(all_players, inclusion_set, [])
-    # Too many objective/speed players
-    inclusion_set = [[PlayerAssignment(b_player, PlayerRole.SPEED), PlayerAssignment(c_player, PlayerRole.OBJECTIVE)]]
+    # Too many objective players should raise an error
+    inclusion_set = [
+        [PlayerAssignment(b_player, PlayerRole.OBJECTIVE), PlayerAssignment(c_player, PlayerRole.OBJECTIVE)]
+    ]
     with pytest.raises(ValueError):
         assign_players_to_teams(all_players, inclusion_set, [])
+    # Too many speed players should NOT raise an error
+    inclusion_set = [[PlayerAssignment(b_player, PlayerRole.SPEED), PlayerAssignment(c_player, PlayerRole.OBJECTIVE)]]
+    assignment = assign_players_to_teams(all_players, inclusion_set, [])
+    # The assignment should not be None, but we assert to indicate assignment should succeed
+    assert assignment is not None
 
     inclusion_set = [[PlayerAssignment(b_player, PlayerRole.FLEX), PlayerAssignment(c_player, PlayerRole.OBJECTIVE)]]
     teams = assign_players_to_teams(all_players, [], [], use_uniform_sampling=True)
