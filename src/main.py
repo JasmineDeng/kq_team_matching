@@ -107,14 +107,23 @@ def recompute(ranking_file_path: str, file_path: str | None) -> None:
 
     with open(file_path, "r") as f:
         reader = csv.reader(f)
-        # Assume we go two rows at a time.
+        # Assume we go a certain number of rows at a time.
         serialized_team = []
+        row_count = 0
         for row in reader:
-            if row:
+            stripped_row = [elem for elem in row if elem]
+            is_empty_row = len(row) == 0
+            # If it's not an empty row, it must have been serialized, and we count this.
+            # Some rows will be empty when stripped because they are a fill player and do not exist.
+            if not is_empty_row:
+                row_count += 1
+            if stripped_row:
                 serialized_team.append(row)
-            if len(serialized_team) == Team.NUM_ROWS_SERIALIZED:
+            if row_count == Team.NUM_ROWS_SERIALIZED:
                 teams.append(Team.from_csv(serialized_team, players))
                 serialized_team = []
+
+                row_count = 0
 
     for t in teams:
         print(t)
