@@ -19,19 +19,41 @@ def test_team_composition() -> None:
     ]
     with pytest.raises(ValueError):
         TeamComposition.validate_team(team)
-    # Should succeed
-    TeamComposition.validate_team(team, allow_missing=True)
     team.append(
         Player("D", primary_role=PlayerRole.FLEX, ranking=_fake_ranking()).to_primary_role_assignment(),
     )
     with pytest.raises(ValueError):
-        TeamComposition.validate_team(team, allow_missing=True)
+        TeamComposition.validate_team(team)
     team = [
         Player("A", primary_role=PlayerRole.QUEEN, ranking=_fake_ranking()).to_primary_role_assignment(),
         Player("B", primary_role=PlayerRole.QUEEN, ranking=_fake_ranking()).to_primary_role_assignment(),
     ]
     with pytest.raises(ValueError):
-        TeamComposition.validate_team(team, allow_missing=True)
+        TeamComposition.validate_team(team)
+
+    team = [
+        Player("A", primary_role=PlayerRole.QUEEN, ranking=_fake_ranking()).to_primary_role_assignment(),
+        Player("B", primary_role=PlayerRole.FLEX, ranking=_fake_ranking()).to_primary_role_assignment(),
+        Player("C", primary_role=PlayerRole.FLEX, ranking=_fake_ranking()).to_primary_role_assignment(),
+        Player("D", primary_role=PlayerRole.SPEED, ranking=_fake_ranking()).to_primary_role_assignment(),
+    ]
+    with pytest.raises(ValueError):
+        TeamComposition.validate_team(team)
+    # Now this should succeed since we allow flex fills
+    team = [
+        Player("A", primary_role=PlayerRole.QUEEN, ranking=_fake_ranking()).to_primary_role_assignment(),
+        Player("B", primary_role=PlayerRole.FLEX, ranking=_fake_ranking()).to_primary_role_assignment(),
+        Player("C", primary_role=PlayerRole.OBJECTIVE, ranking=_fake_ranking()).to_primary_role_assignment(),
+        Player("D", primary_role=PlayerRole.SPEED, ranking=_fake_ranking()).to_primary_role_assignment(),
+    ]
+    TeamComposition.validate_team(team)
+    # And if we add the final FLEX player
+    team.append(Player("E", primary_role=PlayerRole.FLEX, ranking=_fake_ranking()).to_primary_role_assignment())
+    TeamComposition.validate_team(team)
+    # And if we add one more, it is now too many players
+    team.append(Player("F", primary_role=PlayerRole.FLEX, ranking=_fake_ranking()).to_primary_role_assignment())
+    with pytest.raises(ValueError):
+        TeamComposition.validate_team(team)
 
 
 def test_remaining_roles_remaining() -> None:
