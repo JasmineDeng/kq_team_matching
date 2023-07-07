@@ -103,7 +103,7 @@ def _validate_required_roles(
         for player_assignment_list in inclusion_set:
             assignments = [p for p in player_assignment_list if p.assigned_role == required_role]
             assignments_in_inclusion.extend(assignments)
-            # Get the players who had the primary role, but it was overriden.
+            # Get the players who had the primary role as the required role, but it was overriden in the inclusion set.
             overriden_assignments = [
                 p
                 for p in player_assignment_list
