@@ -96,7 +96,11 @@ def _validate_required_roles(
     set, or if they were assigned the role but that role was removed due to being in an inclusion set.
     """
     all_inclusion_set_names = _assignment_to_names(sum(inclusion_set, []))
-    for required_role in TeamComposition.required_roles_no_fill():
+    for role_metadata in TeamComposition.role_metadata():
+        if role_metadata.allows_fill:
+            continue
+
+        required_role = role_metadata.role
         # Get the number of players in this role in an inclusion set.
         assignments_in_inclusion = []
         overriden_assignments_in_inclusion = []
@@ -120,12 +124,20 @@ def _validate_required_roles(
         # These are all the players with the assigned role, whether or not they are in an inclusion set.
         total_assignments_for_role = filtered_assignments_for_inclusion + assignments_in_inclusion
 
-        if len(total_assignments_for_role) != num_teams:
+        # Either:
+        # 1. We require an exact count and the number of players is not equal to the number of teams.
+        # 2. We don't require an exact count, but the role does not allow fills, and the number of players is less than
+        #   the number of teams.
+        if (role_metadata.requires_exact_count and len(total_assignments_for_role) != num_teams) or (
+            not role_metadata.requires_exact_count and len(total_assignments_for_role) < num_teams
+        ):
             too_many_players = len(total_assignments_for_role) > num_teams
             help_str = "Remove" if too_many_players else "Add"
             add_help_str = (
                 f"{', '.join(_assignment_to_names(overriden_assignments_in_inclusion))} player(s) "
                 f"previously had role {required_role} but were overriden because they are in an inclusion set.\n"
+                if overriden_assignments_in_inclusion
+                else "No one's role was overriden in an inclusion set.\n"
             )
             diff = abs(len(total_assignments_for_role) - num_teams)
             inclusion_set_str = (
@@ -220,7 +232,7 @@ def _compute_ideal_score_for_group(
     The *actually* assigned player may differ from the ideal player once exclusion sets are accounted for.
     """
     possible_players_pre_exclusion = sorted(
-        [p.to_primary_role_assignment() for p in players if p.primary_role == role],
+        [PlayerAssignment(player=p, assigned_role=role) for p in players],
         key=_sort_by_score_fn,
         reverse=True,
     )
