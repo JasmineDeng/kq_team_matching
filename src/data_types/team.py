@@ -84,12 +84,13 @@ class TeamComposition:
         team_counts: Dict[PlayerRole, float] = defaultdict(int)
         for player in team:
             team_counts[player.assigned_role] += 1
+        # If diff > 0, then the team has extra players, otherwise they are missing a player.
         team_player_diff: Dict[PlayerRole, float] = {
             role: team_counts[role] - role_counts[role] for role in role_counts
         }
         err_str = ""
         for role, diff in team_player_diff.items():
-            if allow_missing and diff <= 0:
+            if allow_missing and diff < 0:
                 continue
             allows_fill = role_to_metadata[role].allows_fill
             if (not allows_fill and diff != 0) or (allows_fill and diff > 0):
@@ -128,7 +129,7 @@ class Team:
     def __init__(self, players: List[PlayerAssignment]) -> None:
         self.players = players
 
-        TeamComposition.validate_team(self.players)
+        TeamComposition.validate_team(self.players, allow_missing=True)
 
         self._queen = self._get_role(PlayerRole.QUEEN)
         self._speed = self._get_role(PlayerRole.SPEED)
@@ -194,17 +195,14 @@ class Team:
     def __repr__(self) -> str:
         return str(self)
 
-    def to_csv(self) -> list[list[str | float]]:
+    def to_csv(self) -> list[list[str]]:
         serialized_rows = serialize_players_in_order(self.players)
-        to_return = [list(elem) for elem in serialized_rows]
+        to_return: list[list[str]] = [list(elem) for elem in serialized_rows]
         # Add weighted and total scores
-        to_return.append(
-            list(
-                _SerializedTeamRow(
-                    name="", role="", score=str(self.total_score), weighted_score=str(self.total_weighted_score)
-                )
-            )
+        row = _SerializedTeamRow(
+            name="", role="", score=str(self.total_score), weighted_score=str(self.total_weighted_score)
         )
+        to_return.append(list(row))
 
         # Assert the number of serialized rows is correct
         assert len(to_return) == self.NUM_ROWS_SERIALIZED
@@ -212,12 +210,12 @@ class Team:
         return to_return
 
     @classmethod
-    def from_csv(cls, csv_data: list[list[str | float]], players: list[Player]) -> "Team":
+    def from_csv(cls, csv_data: list[list[str]], players: list[Player]) -> "Team":
         name_to_role = {}
         name_to_score = {}
         name_to_weighted_score = {}
         for row in csv_data:
-            team_row = _SerializedTeamRow(*row)
+            team_row = _SerializedTeamRow(*row)  # type: ignore
             # Assume that these rows contain the total scores
             if not team_row.role and not team_row.name:
                 logging.info(f"Found row: {row} that does not represent player. Stopping deserialization.")
@@ -256,7 +254,7 @@ def serialize_players_in_order(player_assignments: list[PlayerAssignment]) -> li
 
     This is useful for when you want to compare the same players across different team compositions.
     """
-    role_to_assignments = {role: [] for role in PlayerRole}
+    role_to_assignments: dict[PlayerRole, list[PlayerAssignment]] = {role: [] for role in PlayerRole}
     for p in player_assignments:
         role_to_assignments[p.assigned_role].append(p)
     # Sort by name so that the order is consistent

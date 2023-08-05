@@ -108,7 +108,7 @@ def recompute(ranking_file_path: str, file_path: str | None) -> None:
     with open(file_path, "r") as f:
         reader = csv.reader(f)
         # Assume we go a certain number of rows at a time.
-        serialized_team = []
+        serialized_team: list[list[str]] = []
         row_count = 0
         for row in reader:
             stripped_row = [elem for elem in row if elem]
