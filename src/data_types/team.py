@@ -77,7 +77,7 @@ class TeamComposition:
         return round(sum(score_list), 2)
 
     @classmethod
-    def validate_team(cls, team: List[PlayerAssignment]) -> None:
+    def validate_team(cls, team: List[PlayerAssignment], allow_missing: bool = False) -> None:
         role_counts = {role: count for role, count in cls.role_counts()}
         role_to_metadata = {metadata.role: metadata for metadata in cls.role_metadata()}
 
@@ -89,6 +89,8 @@ class TeamComposition:
         }
         err_str = ""
         for role, diff in team_player_diff.items():
+            if allow_missing and diff <= 0:
+                continue
             allows_fill = role_to_metadata[role].allows_fill
             if (not allows_fill and diff != 0) or (allows_fill and diff > 0):
                 err_str += f"Should have had {role_counts[role]} players {role.name} but got {team_counts[role]}!\n"
