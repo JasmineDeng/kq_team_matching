@@ -1,5 +1,6 @@
 import datetime
 import os
+from typing import Any
 
 import click
 
@@ -13,7 +14,7 @@ from src.visualization.scores import primary_role_score_histogram
 DATETIME_FORMAT = "%Y-%m-%d_%H:%M:%S"
 
 
-def _to_player_sampling_enum(_, __, value: str) -> PlayerSamplingStrategy:
+def _to_player_sampling_enum(_: Any, __: Any, value: str) -> PlayerSamplingStrategy:
     return PlayerSamplingStrategy[value]
 
 
@@ -101,7 +102,8 @@ def recompute(ranking_file_path: str, file_path: str | None) -> None:
         csv_dates = [csv_file for csv_file in all_league_night_csvs if _parse_datetime(csv_file) is not None]
         file_path = os.path.join(os.path.dirname(__file__), "data", "league_night", sorted(csv_dates)[-1])
 
-    players = load_data(ranking_file_path)
+    # TODO: make the lowercase more consistent
+    players = load_data(ranking_file_path, use_case_sensitive_keys=True)
     teams = read_teams_from_csv(file_path, players)
 
     for t in teams:

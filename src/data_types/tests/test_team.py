@@ -1,10 +1,10 @@
 from collections import defaultdict
 from typing import Dict
 
-import py.path
+import py
 import pytest
 
-from src.data_types.player import Player, PlayerRole
+from src.data_types.player import Player, PlayerAssignment, PlayerRole
 from src.data_types.team import Team, TeamComposition, read_teams_from_csv, write_teams_to_csv
 
 
@@ -170,7 +170,7 @@ def test_multi_team_csv_serialization(team_list: list[Team], tmpdir: py.path.loc
     output_path = f"{tmpdir}/test.csv"
     write_teams_to_csv(output_path, team_list)
 
-    all_players = sum([t.players for t in team_list], [])
+    all_players: list[PlayerAssignment] = sum([t.players for t in team_list], [])
     new_teams = read_teams_from_csv(output_path, {p.player.name: p.player for p in all_players})
     for expected_team, team in zip(team_list, new_teams):
         _assert_teams_equal(expected_team, team)

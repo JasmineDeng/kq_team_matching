@@ -253,7 +253,7 @@ class Team:
 
         ordered_names = []
         for row in csv_data:
-            team_row = _SerializedTeamRow(*row)  # type: ignore
+            team_row = _SerializedTeamRow(*row)
             # Assume that these rows contain the total scores
             if not team_row.role and not team_row.name:
                 logging.info(f"Found row: {row} that does not represent player. Stopping deserialization.")
@@ -272,10 +272,10 @@ class Team:
             if player_name not in name_to_role:
                 raise ValueError(f"Player role {player_name} not found in role list! Got: {list(name_to_role.keys())}.")
             player_role = name_to_role[player_name]
-            if player_name.lower() not in players:
+            if player_name not in players:
                 raise ValueError(f"Player {player_name} not found in player list! Got: {list(players.keys())} names.")
 
-            assignment = PlayerAssignment(player=players[player_name.lower()], assigned_role=player_role)
+            assignment = PlayerAssignment(player=players[player_name], assigned_role=player_role)
             if (
                 assignment.score != name_to_score[player_name]
                 or assignment.weighted_score != name_to_weighted_score[player_name]
