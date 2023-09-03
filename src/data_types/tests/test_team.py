@@ -5,11 +5,9 @@ import py
 import pytest
 
 from src.data_types.player import Player, PlayerAssignment, PlayerRole
+from src.data_types.player_pool import PlayerPool
 from src.data_types.team import Team, TeamComposition, read_teams_from_csv, write_teams_to_csv
-
-
-def _fake_ranking() -> Dict[PlayerRole, float]:
-    return {role: 5.0 for role in PlayerRole}
+from src.data_types.tests.mock_data import get_fake_ranking
 
 
 def _assert_teams_equal(expected_team: Team, team: Team) -> None:
@@ -29,26 +27,26 @@ def _player_list_to_team(player_list: list[Player]) -> Team:
 
 def _get_team_list() -> list[list[Team]]:
     first_team_players = [
-        Player("A", primary_role=PlayerRole.QUEEN, ranking=_fake_ranking()),
-        Player("B", primary_role=PlayerRole.FLEX, ranking=_fake_ranking()),
-        Player("C", primary_role=PlayerRole.SPEED, ranking=_fake_ranking()),
-        Player("D", primary_role=PlayerRole.OBJECTIVE, ranking=_fake_ranking()),
+        Player("A", primary_role=PlayerRole.QUEEN, ranking=get_fake_ranking()),
+        Player("B", primary_role=PlayerRole.FLEX, ranking=get_fake_ranking()),
+        Player("C", primary_role=PlayerRole.SPEED, ranking=get_fake_ranking()),
+        Player("D", primary_role=PlayerRole.OBJECTIVE, ranking=get_fake_ranking()),
     ]
 
     # Second team also requires a fill
     second_team_players = [
-        Player("E", primary_role=PlayerRole.QUEEN, ranking=_fake_ranking()),
-        Player("F", primary_role=PlayerRole.FLEX, ranking=_fake_ranking()),
-        Player("G", primary_role=PlayerRole.SPEED, ranking=_fake_ranking()),
-        Player("H", primary_role=PlayerRole.OBJECTIVE, ranking=_fake_ranking()),
+        Player("E", primary_role=PlayerRole.QUEEN, ranking=get_fake_ranking()),
+        Player("F", primary_role=PlayerRole.FLEX, ranking=get_fake_ranking()),
+        Player("G", primary_role=PlayerRole.SPEED, ranking=get_fake_ranking()),
+        Player("H", primary_role=PlayerRole.OBJECTIVE, ranking=get_fake_ranking()),
     ]
-    fill_player = Player("I", primary_role=PlayerRole.FLEX, ranking=_fake_ranking())
-    other_fill_player = Player("J", primary_role=PlayerRole.FLEX, ranking=_fake_ranking())
+    fill_player = Player("I", primary_role=PlayerRole.FLEX, ranking=get_fake_ranking())
+    other_fill_player = Player("J", primary_role=PlayerRole.FLEX, ranking=get_fake_ranking())
 
     return [
         [_player_list_to_team(first_team_players), _player_list_to_team(second_team_players)],
         # First team has no fills
-        [_player_list_to_team(first_team_players + [fill_player]), _player_list_to_team(first_team_players)],
+        [_player_list_to_team(first_team_players + [fill_player]), _player_list_to_team(second_team_players)],
         # Second team has no fills
         [_player_list_to_team(first_team_players), _player_list_to_team(second_team_players + [fill_player])],
         # Both have no fill
@@ -62,9 +60,9 @@ def _get_team_list() -> list[list[Team]]:
             _player_list_to_team(second_team_players),
             _player_list_to_team(
                 [
-                    Player("K", primary_role=PlayerRole.QUEEN, ranking=_fake_ranking()),
-                    Player("L", primary_role=PlayerRole.OBJECTIVE, ranking=_fake_ranking()),
-                    Player("M", primary_role=PlayerRole.SPEED, ranking=_fake_ranking()),
+                    Player("K", primary_role=PlayerRole.QUEEN, ranking=get_fake_ranking()),
+                    Player("L", primary_role=PlayerRole.OBJECTIVE, ranking=get_fake_ranking()),
+                    Player("M", primary_role=PlayerRole.SPEED, ranking=get_fake_ranking()),
                     fill_player,
                     other_fill_player,
                 ]
@@ -75,53 +73,53 @@ def _get_team_list() -> list[list[Team]]:
 
 def test_team_composition() -> None:
     team = [
-        Player("A", primary_role=PlayerRole.QUEEN, ranking=_fake_ranking()).to_primary_role_assignment(),
-        Player("B", primary_role=PlayerRole.FLEX, ranking=_fake_ranking()).to_primary_role_assignment(),
-        Player("C", primary_role=PlayerRole.FLEX, ranking=_fake_ranking()).to_primary_role_assignment(),
+        Player("A", primary_role=PlayerRole.QUEEN, ranking=get_fake_ranking()).to_primary_role_assignment(),
+        Player("B", primary_role=PlayerRole.FLEX, ranking=get_fake_ranking()).to_primary_role_assignment(),
+        Player("C", primary_role=PlayerRole.FLEX, ranking=get_fake_ranking()).to_primary_role_assignment(),
     ]
     with pytest.raises(ValueError):
         TeamComposition.validate_team(team)
     team.append(
-        Player("D", primary_role=PlayerRole.FLEX, ranking=_fake_ranking()).to_primary_role_assignment(),
+        Player("D", primary_role=PlayerRole.FLEX, ranking=get_fake_ranking()).to_primary_role_assignment(),
     )
     with pytest.raises(ValueError):
         TeamComposition.validate_team(team)
     team = [
-        Player("A", primary_role=PlayerRole.QUEEN, ranking=_fake_ranking()).to_primary_role_assignment(),
-        Player("B", primary_role=PlayerRole.QUEEN, ranking=_fake_ranking()).to_primary_role_assignment(),
+        Player("A", primary_role=PlayerRole.QUEEN, ranking=get_fake_ranking()).to_primary_role_assignment(),
+        Player("B", primary_role=PlayerRole.QUEEN, ranking=get_fake_ranking()).to_primary_role_assignment(),
     ]
     with pytest.raises(ValueError):
         TeamComposition.validate_team(team)
 
     team = [
-        Player("A", primary_role=PlayerRole.QUEEN, ranking=_fake_ranking()).to_primary_role_assignment(),
-        Player("B", primary_role=PlayerRole.FLEX, ranking=_fake_ranking()).to_primary_role_assignment(),
-        Player("C", primary_role=PlayerRole.FLEX, ranking=_fake_ranking()).to_primary_role_assignment(),
-        Player("D", primary_role=PlayerRole.SPEED, ranking=_fake_ranking()).to_primary_role_assignment(),
+        Player("A", primary_role=PlayerRole.QUEEN, ranking=get_fake_ranking()).to_primary_role_assignment(),
+        Player("B", primary_role=PlayerRole.FLEX, ranking=get_fake_ranking()).to_primary_role_assignment(),
+        Player("C", primary_role=PlayerRole.FLEX, ranking=get_fake_ranking()).to_primary_role_assignment(),
+        Player("D", primary_role=PlayerRole.SPEED, ranking=get_fake_ranking()).to_primary_role_assignment(),
     ]
     with pytest.raises(ValueError):
         TeamComposition.validate_team(team)
     # Now this should succeed since we allow flex fills
     team = [
-        Player("A", primary_role=PlayerRole.QUEEN, ranking=_fake_ranking()).to_primary_role_assignment(),
-        Player("B", primary_role=PlayerRole.FLEX, ranking=_fake_ranking()).to_primary_role_assignment(),
-        Player("C", primary_role=PlayerRole.OBJECTIVE, ranking=_fake_ranking()).to_primary_role_assignment(),
-        Player("D", primary_role=PlayerRole.SPEED, ranking=_fake_ranking()).to_primary_role_assignment(),
+        Player("A", primary_role=PlayerRole.QUEEN, ranking=get_fake_ranking()).to_primary_role_assignment(),
+        Player("B", primary_role=PlayerRole.FLEX, ranking=get_fake_ranking()).to_primary_role_assignment(),
+        Player("C", primary_role=PlayerRole.OBJECTIVE, ranking=get_fake_ranking()).to_primary_role_assignment(),
+        Player("D", primary_role=PlayerRole.SPEED, ranking=get_fake_ranking()).to_primary_role_assignment(),
     ]
     TeamComposition.validate_team(team)
     # And if we add the final FLEX player
-    team.append(Player("E", primary_role=PlayerRole.FLEX, ranking=_fake_ranking()).to_primary_role_assignment())
+    team.append(Player("E", primary_role=PlayerRole.FLEX, ranking=get_fake_ranking()).to_primary_role_assignment())
     TeamComposition.validate_team(team)
     # And if we add one more, it is now too many players
-    team.append(Player("F", primary_role=PlayerRole.FLEX, ranking=_fake_ranking()).to_primary_role_assignment())
+    team.append(Player("F", primary_role=PlayerRole.FLEX, ranking=get_fake_ranking()).to_primary_role_assignment())
     with pytest.raises(ValueError):
         TeamComposition.validate_team(team)
 
 
 def test_remaining_roles_remaining() -> None:
     team = [
-        Player("A", primary_role=PlayerRole.QUEEN, ranking=_fake_ranking()).to_primary_role_assignment(),
-        Player("B", primary_role=PlayerRole.FLEX, ranking=_fake_ranking()).to_primary_role_assignment(),
+        Player("A", primary_role=PlayerRole.QUEEN, ranking=get_fake_ranking()).to_primary_role_assignment(),
+        Player("B", primary_role=PlayerRole.FLEX, ranking=get_fake_ranking()).to_primary_role_assignment(),
     ]
     remaining_roles = TeamComposition.remaining_roles_required(team)
     counts: Dict[PlayerRole, int] = defaultdict(int)
@@ -136,33 +134,33 @@ def test_remaining_roles_remaining() -> None:
 
 def test_csv_serialization() -> None:
     all_players = [
-        Player("A", primary_role=PlayerRole.QUEEN, ranking=_fake_ranking()),
-        Player("B", primary_role=PlayerRole.FLEX, ranking=_fake_ranking()),
-        Player("C", primary_role=PlayerRole.FLEX, ranking=_fake_ranking()),
-        Player("D", primary_role=PlayerRole.SPEED, ranking=_fake_ranking()),
-        Player("E", primary_role=PlayerRole.OBJECTIVE, ranking=_fake_ranking()),
+        Player("A", primary_role=PlayerRole.QUEEN, ranking=get_fake_ranking()),
+        Player("B", primary_role=PlayerRole.FLEX, ranking=get_fake_ranking()),
+        Player("C", primary_role=PlayerRole.FLEX, ranking=get_fake_ranking()),
+        Player("D", primary_role=PlayerRole.SPEED, ranking=get_fake_ranking()),
+        Player("E", primary_role=PlayerRole.OBJECTIVE, ranking=get_fake_ranking()),
     ]
-    all_players_dict = {p.name: p for p in all_players}
+    player_pool = PlayerPool(all_players)
     # Define a team with A,B,D,E, aka requiring a fill for a FLEX player.
     team = Team([p.to_primary_role_assignment() for p in all_players if p.name in {"A", "B", "D", "E"}])
 
-    new_team = Team.from_csv(team.to_csv(), all_players_dict)
+    new_team = Team.from_csv(team.to_csv(), player_pool)
     _assert_teams_equal(team, new_team)
 
     # Now add the last FLEX player.
     team = Team([p.to_primary_role_assignment() for p in all_players])
-    new_team = Team.from_csv(team.to_csv(), all_players_dict)
+    new_team = Team.from_csv(team.to_csv(), player_pool)
     _assert_teams_equal(team, new_team)
 
     invalid_player_list = [p.to_primary_role_assignment() for p in all_players if p.name in {"A", "B", "D", "E"}]
     # This player is not in the all_players_dict, so it should fail.
     invalid_player_list.append(
-        Player("F", primary_role=PlayerRole.FLEX, ranking=_fake_ranking()).to_primary_role_assignment()
+        Player("F", primary_role=PlayerRole.FLEX, ranking=get_fake_ranking()).to_primary_role_assignment()
     )
     team = Team(invalid_player_list)
     csv_list = team.to_csv()
     with pytest.raises(ValueError):
-        Team.from_csv(csv_list, all_players_dict)
+        Team.from_csv(csv_list, player_pool)
 
 
 @pytest.mark.parametrize("team_list", _get_team_list())
@@ -171,9 +169,32 @@ def test_multi_team_csv_serialization(team_list: list[Team], tmpdir: py.path.loc
     write_teams_to_csv(output_path, team_list)
 
     all_players: list[PlayerAssignment] = sum([t.players for t in team_list], [])
-    new_teams = read_teams_from_csv(output_path, {p.player.name: p.player for p in all_players})
+    new_teams = read_teams_from_csv(output_path, PlayerPool([p.player for p in all_players]))
     for expected_team, team in zip(team_list, new_teams):
         _assert_teams_equal(expected_team, team)
+
+
+def test_multi_team_csv_duplicate_player(tmpdir: py.path.local) -> None:
+    first_team = [
+        Player("A", primary_role=PlayerRole.QUEEN, ranking=get_fake_ranking()),
+        Player("B", primary_role=PlayerRole.FLEX, ranking=get_fake_ranking()),
+        Player("C", primary_role=PlayerRole.OBJECTIVE, ranking=get_fake_ranking()),
+        Player("D", primary_role=PlayerRole.SPEED, ranking=get_fake_ranking()),
+    ]
+    second_team = [
+        first_team[0],
+        Player("E", primary_role=PlayerRole.FLEX, ranking=get_fake_ranking()),
+        Player("F", primary_role=PlayerRole.OBJECTIVE, ranking=get_fake_ranking()),
+        Player("G", primary_role=PlayerRole.SPEED, ranking=get_fake_ranking()),
+    ]
+    team_list = [_player_list_to_team(first_team), _player_list_to_team(second_team)]
+
+    output_path = f"{tmpdir}/test.csv"
+    all_players: list[PlayerAssignment] = [p.to_primary_role_assignment() for p in first_team + second_team[1:]]
+
+    write_teams_to_csv(output_path, team_list)
+    with pytest.raises(ValueError):
+        read_teams_from_csv(output_path, PlayerPool([p.player for p in all_players]))
 
 
 def test_is_num_assignments_valid() -> None:

@@ -41,13 +41,12 @@ def cli() -> None:
 )
 def assign(file_path: str) -> None:
     player_infos = load_data(file_path)
-    all_names = set(player_infos.keys())
-    all_players = load_attendance("data/attendance.csv", player_infos)
+    player_pool = load_attendance("data/attendance.csv", player_infos)
 
-    inclusion_set = load_inclusion_set("data/inclusion_set.csv", player_infos)
-    exclusion_set = load_exclusion_set("data/exclusion_set.csv", all_names)
+    inclusion_set = load_inclusion_set("data/inclusion_set.csv", player_pool)
+    exclusion_set = load_exclusion_set("data/exclusion_set.csv", player_infos)
     print(f"Loaded exclusion set: {exclusion_set}")
-    teams = assign_players_to_teams(all_players, inclusion_set, exclusion_set)
+    teams = assign_players_to_teams(player_pool, inclusion_set, exclusion_set)
     teams = sorted(teams, key=lambda t: t.total_score)
     for t in teams:
         print(t)
@@ -62,13 +61,13 @@ def assign(file_path: str) -> None:
     print(f"All scores (in order): {summary_str}")
     print(f"All weighted scores (in order): {[t.total_weighted_score for t in teams]}")
 
-    averages = roles_to_average_score(all_players)
+    averages = roles_to_average_score(player_pool.players)
     print(f"Summed average: {TeamComposition.total_score_for_ranking(averages)}")
     print(f"Summed weighted average: {TeamComposition.weighted_score_for_ranking(averages)}")
 
     for t in teams:
         if t.needs_fill:
-            possible_fills = find_fills(t, all_players, teams)
+            possible_fills = find_fills(t, player_pool.players, teams)
             print(f"For team {t.team_name}, possible fills: {possible_fills}")
             subsample = possible_fills[:2]
             print(f"Randomly chosen two fills: {subsample}")
@@ -103,7 +102,7 @@ def recompute(ranking_file_path: str, file_path: str | None) -> None:
         file_path = os.path.join(os.path.dirname(__file__), "data", "league_night", sorted(csv_dates)[-1])
 
     # TODO: make the lowercase more consistent
-    players = load_data(ranking_file_path, use_case_sensitive_keys=True)
+    players = load_data(ranking_file_path)
     teams = read_teams_from_csv(file_path, players)
 
     for t in teams:
@@ -125,7 +124,7 @@ def recompute(ranking_file_path: str, file_path: str | None) -> None:
 def vis_scores(file_path: str) -> None:
     player_infos = load_data(file_path)
     all_players = load_attendance("data/attendance.csv", player_infos)
-    primary_role_score_histogram(all_players)
+    primary_role_score_histogram(all_players.players)
 
 
 if __name__ == "__main__":
