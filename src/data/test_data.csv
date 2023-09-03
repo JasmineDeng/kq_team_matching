@@ -14,13 +14,13 @@
 ,Jess,speed,flex,,7,7,6,7
 ,Blue Chris,speed,queen,,6,8,8,8
 ,Sam,flex,flex,,4,7,6,9
-,Charles,flex,objective,,2,4.5,4.5,4.5
+,Charles,flex,objective,,2,4,4,5
 ,Jasmine,objective,flex,,2,4,4,8
-,Matt,speed,flex,,7,7,7,7
+,Matt,speed,flex,,7,9,9,9
 ,Turese,objective,flex,,1,3.5,3,6
 ,Steve,speed,flex,,4,9,8,7
 ,Drew,speed,speed,,6,6,6,6
-,Keoni,flex,speed,,1,3,3,3
+,Keoni,flex,speed,,1,4,4,4
 ,Mo,flex,objective,,2,3,3,5
 ,Scott,speed,flex,,3,7,7,7
 ,Reed,flex,speed,,3,5,5,5
@@ -46,8 +46,8 @@
 ,Casey,flex,objective,,1,1,1,1
 ,Andrew L,flex,objective,,1,2,2,2
 ,Nick,flex,objective,,1,1,1,1
-,Mike,flex,objective,,3,3,3,3
-,Bri,objective,flex,,1,1,1,2.4
+,Mike,flex,objective,,3,4,4,4
+,Bri,objective,flex,,1,1,1,3
 ,Jeremy,objective,flex,,1,1,1,1
 ,James,objective,flex,,1,1,1,1
 ,Heather,flex,speed,,2,5,5,6
@@ -55,12 +55,21 @@
 ,Miranda,flex,objective,,5,6,6,8
 ,Jeff,flex,objective,,4,5,5,7
 ,Soren,speed,,5,9,9,9
-,McKenna,speed,flex,,3,4,4,4
-,Rachel,flex,objective,,2,4,4,8
-,Abby,queen,flex,,5,7,7,7
+,McKenna,flex,objective,,3,4,4,4
+,Rachel,flex,objective,,2,4,4,6
+,Abby,queen,flex,,4,7,7,6
 ,Kendra,flex,objective,,2,3,3,4
 ,Toshi,speed,flex,,7,6,6,5
 ,Ian,speed,flex,,4,7,7,6
 ,Quinn,speed,flex,,5,5,5,6
-,Elyse,speed,flex,,4,6,6,8
-
+,Elyse,speed,flex,,4,8,8,8
+,Rob,queen,objective,,9,7,7,10
+,Eva,flex,objective,,1,1,1,1
+,Parker,flex,objective,,1,2,2,2
+,Shekt,flex,objective,,1,1,1,1
+,Nate,flex,objective,,1,1,1,1
+,Curt,flex,objective,,1,1,1,1
+,Joey,flex,objective,,1,2,2,3
+,Dylan Lee,queen,speed,,9.01,8,8,8
+,Ryan N,flex,objective,,2,2,2,2
+,Jillian,objective,flex,,1,1,1,1

@@ -17,7 +17,7 @@ def test_happy_find_fills() -> None:
             _player_for_role("B", PlayerRole.FLEX),
             _player_for_role("C", PlayerRole.OBJECTIVE),
             _player_for_role("D", PlayerRole.FLEX),
-        ]
+        ],
     )
     all_players = team.players + team_with_fill.players
     with pytest.raises(ValueError):

@@ -1,13 +1,39 @@
+import csv
+import logging
 from collections import defaultdict
 from typing import Dict, List, NamedTuple, Optional, Set, Tuple
 
 from src.data_types.player import Player, PlayerAssignment, PlayerRole
 
 
+class _SerializedTeamRow(NamedTuple):
+    role: str
+    name: str
+    score: str
+    weighted_score: str
+
+
 class PlayerRoleMetadata(NamedTuple):
+    """Metadata about a player role, such as if they allow a fill."""
+
     role: PlayerRole
+    """The role this metadata is for."""
+
     allows_fill: bool
+    """If True, then this role can have a 'fill' player on a team.
+
+    This means that if the TeamComposition specifies 2 players for a certain role, and a fill is allowed, then there can
+    be 0, 1, or 2 players on the team with that role. If no fills are allowed, then there must be exactly 2 players with
+    that role on the team.
+    """
+
     requires_exact_count: bool
+    """If True, then this role must have the exact number of players defined in the TeamComposition during assignment.
+
+    For example, for QUEEN and OBJECTIVE we may want exactly one queen per team, and one objective per team, so we
+    require the number of players with those roles to be exactly the number of teams. But for other roles, like SPEED,
+    because SPEED players can also FLEX, we can have more players assigned SPEED than the number of teams.
+    """
 
 
 def roles_to_average_score(all_players: Set[Player]) -> Dict[PlayerRole, float]:
@@ -31,16 +57,27 @@ class TeamComposition:
     ]
 
     @classmethod
-    def role_metadata(cls) -> List[PlayerRoleMetadata]:
-        to_return = [
+    def role_metadata(cls) -> dict[PlayerRole, PlayerRoleMetadata]:
+        metadata_list = [
             PlayerRoleMetadata(role=PlayerRole.QUEEN, allows_fill=False, requires_exact_count=True),
             PlayerRoleMetadata(role=PlayerRole.SPEED, allows_fill=False, requires_exact_count=False),
             PlayerRoleMetadata(role=PlayerRole.FLEX, allows_fill=True, requires_exact_count=False),
             PlayerRoleMetadata(role=PlayerRole.OBJECTIVE, allows_fill=False, requires_exact_count=True),
         ]
-        roles_to_return = [val.role for val in to_return]
+        roles_to_return = [val.role for val in metadata_list]
         assert all(role in cls.roles for role in roles_to_return)
-        return to_return
+        metadata_dict = {val.role: val for val in metadata_list}
+        return metadata_dict
+
+    @classmethod
+    def get_role_metadata(cls, role: PlayerRole) -> PlayerRoleMetadata:
+        if role not in cls.role_metadata():
+            raise ValueError(f"Invalid role {role}, not in team composition {cls.roles}")
+        return cls.role_metadata()[role]
+
+    @classmethod
+    def role_allows_fill(cls, role: PlayerRole) -> bool:
+        return cls.get_role_metadata(role).allows_fill
 
     @classmethod
     def role_counts(cls) -> List[Tuple[PlayerRole, int]]:
@@ -62,20 +99,22 @@ class TeamComposition:
 
     @classmethod
     def validate_team(cls, team: List[PlayerAssignment], allow_missing: bool = False) -> None:
-        expected_counts: Dict[PlayerRole, float] = defaultdict(int)
-        for role in cls.roles:
-            expected_counts[role] += 1
+        role_counts = {role: count for role, count in cls.role_counts()}
 
         team_counts: Dict[PlayerRole, float] = defaultdict(int)
         for player in team:
             team_counts[player.assigned_role] += 1
+        # If diff > 0, then the team has extra players, otherwise they are missing a player.
         team_player_diff: Dict[PlayerRole, float] = {
-            role: team_counts[role] - expected_counts[role] for role in expected_counts
+            role: team_counts[role] - role_counts[role] for role in role_counts
         }
         err_str = ""
         for role, diff in team_player_diff.items():
-            if (not allow_missing and diff != 0) or (allow_missing and diff > 0):
-                err_str += f"Should have had {expected_counts[role]} players {role.name} but got {team_counts[role]}!\n"
+            if allow_missing and diff < 0:
+                continue
+            allows_fill = cls.role_allows_fill(role)
+            if (not allows_fill and diff != 0) or (allows_fill and diff > 0):
+                err_str += f"Should have had {role_counts[role]} players {role.name} but got {team_counts[role]}!\n"
         if err_str:
             err_str += f"Team players: {[p.player.name for p in team]}"
             raise ValueError(err_str)
@@ -98,8 +137,31 @@ class TeamComposition:
                 missing_roles.extend([role] * diff)
         return missing_roles
 
+    @classmethod
+    def is_num_assignments_valid(cls, role: PlayerRole, num_teams: int, num_assignments: int) -> bool:
+        role_metadata = cls.get_role_metadata(role)
+        # Two scenarios:
+        # 1. The role requires an exact count, so the number of assignments must be equal to the number of teams.
+        # 2. The role does not require an exact count, but if the role does not allow fills, then the number of
+        #   assignments must be equal to the number of teams.
+        # We do not consider the case where the number of assignments is greater than the number of teams.
+        if role_metadata.requires_exact_count:
+            return num_assignments == num_teams
+        # Now the role does not require exact count, but cannot have fills.
+        if not role_metadata.allows_fill:
+            return num_assignments >= num_teams
+        # If it does allow fills, then it can have any number.
+        return True
+
 
 class Team:
+
+    NUM_ROWS_SERIALIZED = 6
+    """The number of CSV rows when the team is serialized.
+
+    Presently, we have one row for the player names and one row for the scores.
+    """
+
     def __init__(self, players: List[PlayerAssignment]) -> None:
         self.players = players
 
@@ -168,3 +230,132 @@ class Team:
 
     def __repr__(self) -> str:
         return str(self)
+
+    def to_csv(self) -> list[list[str]]:
+        serialized_rows = serialize_players_in_order(self.players)
+        to_return: list[list[str]] = [list(elem) for elem in serialized_rows]
+        # Add weighted and total scores
+        row = _SerializedTeamRow(
+            name="", role="", score=str(self.total_score), weighted_score=str(self.total_weighted_score)
+        )
+        to_return.append(list(row))
+
+        # Assert the number of serialized rows is correct
+        assert len(to_return) == self.NUM_ROWS_SERIALIZED
+
+        return to_return
+
+    @classmethod
+    def from_csv(cls, csv_data: list[list[str]], players: dict[str, Player]) -> "Team":
+        name_to_role = {}
+        name_to_score = {}
+        name_to_weighted_score = {}
+
+        ordered_names = []
+        for row in csv_data:
+            team_row = _SerializedTeamRow(*row)
+            # Assume that these rows contain the total scores
+            if not team_row.role and not team_row.name:
+                logging.info(f"Found row: {row} that does not represent player. Stopping deserialization.")
+                break
+
+            name_to_role[team_row.name] = PlayerRole[team_row.role]
+            name_to_score[team_row.name] = float(team_row.score)
+            name_to_weighted_score[team_row.name] = float(team_row.weighted_score)
+            # Append the role to the ordered roles list, so we can also deserialize in order.
+            ordered_names.append(team_row.name)
+
+        team_players = []
+
+        for player_name in ordered_names:
+            # This should never raise an error if we are properly constructing the dicts.
+            if player_name not in name_to_role:
+                raise ValueError(f"Player role {player_name} not found in role list! Got: {list(name_to_role.keys())}.")
+            player_role = name_to_role[player_name]
+            if player_name not in players:
+                raise ValueError(f"Player {player_name} not found in player list! Got: {list(players.keys())} names.")
+
+            assignment = PlayerAssignment(player=players[player_name], assigned_role=player_role)
+            if (
+                assignment.score != name_to_score[player_name]
+                or assignment.weighted_score != name_to_weighted_score[player_name]
+            ):
+                logging.warning(
+                    f"Score mismatch for player {player_name}, expected {name_to_score[player_name]}, weighted "
+                    f"{name_to_weighted_score[player_name]}, but got {assignment.score}. Was their score updated?"
+                )
+            team_players.append(assignment)
+        return cls(team_players)
+
+
+def write_teams_to_csv(output_file_name: str, teams: list[Team]) -> None:
+    with open(output_file_name, "w") as f:
+        writer = csv.writer(f)
+        for team in teams:
+            writer.writerows(team.to_csv())
+            writer.writerow([])
+
+
+def read_teams_from_csv(csv_path: str, all_players: Dict[str, Player]) -> list[Team]:
+    """Given a csv, load a list of teams."""
+    teams = []
+    with open(csv_path, "r") as f:
+        reader = csv.reader(f)
+        # Assume we go a certain number of rows at a time.
+        serialized_team: list[list[str]] = []
+        row_count = 0
+        for row in reader:
+            stripped_row = [elem for elem in row if elem]
+            is_empty_row = len(row) == 0
+            # If it's not an empty row, it must have been serialized, and we count this.
+            # Some rows will be empty when stripped because they are a fill player and do not exist.
+            if not is_empty_row:
+                row_count += 1
+            if stripped_row:
+                serialized_team.append(row)
+            if row_count == Team.NUM_ROWS_SERIALIZED:
+                teams.append(Team.from_csv(serialized_team, all_players))
+                serialized_team = []
+
+                row_count = 0
+    return teams
+
+
+def serialize_players_in_order(player_assignments: list[PlayerAssignment]) -> list[_SerializedTeamRow]:
+    """Reorder players so that the players are in the same order as the team composition.
+
+    This is useful for when you want to compare the same players across different team compositions.
+    """
+    role_to_assignments: dict[PlayerRole, list[PlayerAssignment]] = {role: [] for role in PlayerRole}
+    for p in player_assignments:
+        role_to_assignments[p.assigned_role].append(p)
+    # Sort by name so that the order is consistent
+    for role in role_to_assignments:
+        role_to_assignments[role].sort(key=lambda assignment: assignment.player.name)
+
+    to_return = []
+    for role in TeamComposition.roles:
+        current_assignments = role_to_assignments[role]
+        if len(current_assignments) == 0 and not TeamComposition.role_allows_fill(role):
+            raise ValueError(f"Missing player for role {role}")
+        elif len(current_assignments) == 0:
+            to_return.append(_SerializedTeamRow(name="", role="", score="", weighted_score=""))
+        else:
+            assignment = current_assignments.pop()
+            to_return.append(
+                _SerializedTeamRow(
+                    name=assignment.player.name,
+                    role=assignment.assigned_role.name,
+                    score=str(assignment.score),
+                    weighted_score=str(assignment.weighted_score),
+                )
+            )
+
+    # If anybody is left, then there are more players than the team composition allows.
+    for role, assignments in role_to_assignments.items():
+        if len(assignments) > 0:
+            raise ValueError(
+                f"Too many players for team composition! Got {assignments} for role {role}, but expected {TeamComposition.roles}"
+            )
+
+    return to_return

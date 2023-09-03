@@ -51,7 +51,7 @@ def _try_to_float(value: str, default_value: int = 1) -> float:
         return default_value
 
 
-def load_data(csv_path: str) -> Dict[str, Player]:
+def load_data(csv_path: str, use_case_sensitive_keys: bool = False) -> Dict[str, Player]:
     column_name_to_role = {
         "queen rank": PlayerRole.QUEEN,
         "flex rank": PlayerRole.FLEX,
@@ -73,7 +73,9 @@ def load_data(csv_path: str) -> Dict[str, Player]:
             float_ranking_dict = {key: _try_to_float(value) for key, value in ranking_dict.items()}
 
             name = row["name"].strip()
-            to_return[name.lower()] = Player(
+
+            key = name if use_case_sensitive_keys else name.lower()
+            to_return[key] = Player(
                 name=name,
                 primary_role=primary_role,
                 ranking=float_ranking_dict,
@@ -169,8 +171,3 @@ def load_inclusion_set(csv_path: str, player_info: Dict[str, Player]) -> List[Li
                 TeamComposition.validate_team(team, allow_missing=True)
                 inclusion_set.append(team)
     return inclusion_set
-
-
-if __name__ == "__main__":
-    players = load_data("data/test_data.csv")
-    print(load_inclusion_set("data/inclusion_set.csv", players))
