@@ -6,5 +6,5 @@ cd "$PROJECT_DIRECTORY/src" || exit
 
 echo "changed directory to $PROJECT_DIRECTORY/src"
 
-mypy .
+mypy . --config-file ../mypy.ini
 pytest .

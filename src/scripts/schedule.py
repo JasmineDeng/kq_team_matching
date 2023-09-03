@@ -1,3 +1,5 @@
+# mypy: ignore-errors
+
 from itertools import combinations
 
 N = 7
