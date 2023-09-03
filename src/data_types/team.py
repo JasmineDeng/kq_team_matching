@@ -1,9 +1,10 @@
 import csv
 import logging
 from collections import defaultdict
-from typing import Dict, List, NamedTuple, Optional, Set, Tuple
+from typing import Dict, List, NamedTuple, Optional, Tuple
 
 from src.data_types.player import Player, PlayerAssignment, PlayerRole
+from src.data_types.player_pool import PlayerPool
 
 
 class _SerializedTeamRow(NamedTuple):
@@ -36,7 +37,7 @@ class PlayerRoleMetadata(NamedTuple):
     """
 
 
-def roles_to_average_score(all_players: Set[Player]) -> Dict[PlayerRole, float]:
+def roles_to_average_score(all_players: list[Player]) -> Dict[PlayerRole, float]:
     role_to_players: Dict[PlayerRole, List[float]] = {}
     for player in all_players:
         if player.primary_role not in role_to_players:
@@ -246,7 +247,7 @@ class Team:
         return to_return
 
     @classmethod
-    def from_csv(cls, csv_data: list[list[str]], players: dict[str, Player]) -> "Team":
+    def from_csv(cls, csv_data: list[list[str]], player_pool: PlayerPool) -> "Team":
         name_to_role = {}
         name_to_score = {}
         name_to_weighted_score = {}
@@ -272,10 +273,9 @@ class Team:
             if player_name not in name_to_role:
                 raise ValueError(f"Player role {player_name} not found in role list! Got: {list(name_to_role.keys())}.")
             player_role = name_to_role[player_name]
-            if player_name not in players:
-                raise ValueError(f"Player {player_name} not found in player list! Got: {list(players.keys())} names.")
+            player = player_pool.get_player(player_name)
 
-            assignment = PlayerAssignment(player=players[player_name], assigned_role=player_role)
+            assignment = PlayerAssignment(player=player, assigned_role=player_role)
             if (
                 assignment.score != name_to_score[player_name]
                 or assignment.weighted_score != name_to_weighted_score[player_name]
@@ -296,7 +296,7 @@ def write_teams_to_csv(output_file_name: str, teams: list[Team]) -> None:
             writer.writerow([])
 
 
-def read_teams_from_csv(csv_path: str, all_players: Dict[str, Player]) -> list[Team]:
+def read_teams_from_csv(csv_path: str, player_pool: PlayerPool) -> list[Team]:
     """Given a csv, load a list of teams."""
     teams = []
     with open(csv_path, "r") as f:
@@ -314,7 +314,7 @@ def read_teams_from_csv(csv_path: str, all_players: Dict[str, Player]) -> list[T
             if stripped_row:
                 serialized_team.append(row)
             if row_count == Team.NUM_ROWS_SERIALIZED:
-                teams.append(Team.from_csv(serialized_team, all_players))
+                teams.append(Team.from_csv(serialized_team, player_pool))
                 serialized_team = []
 
                 row_count = 0

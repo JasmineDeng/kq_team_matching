@@ -3,6 +3,7 @@ import random
 from typing import Callable, Dict, List, NamedTuple, Optional, Set, Tuple
 
 from src.data_types.player import BasePlayerAssignment, Player, PlayerAssignment, PlayerRole
+from src.data_types.player_pool import PlayerPool
 from src.data_types.team import Team, TeamComposition, roles_to_average_score
 from src.sampling import PlayerSamplingStrategy, get_players_for_role, sample_players
 
@@ -169,24 +170,23 @@ def _players_to_assignment(players: List[Player], role: PlayerRole) -> List[Play
     return [PlayerAssignment(player=p, assigned_role=role) for p in players]
 
 
-def _contains_exclusion_set(players: Set[Player], exclusion_set: List[Set[str]]) -> Optional[Set[str]]:
+def _contains_exclusion_set(players: list[Player], exclusion_set: list[list[Player]]) -> Optional[list[Player]]:
     """Check if the set of players violates an exclusion set."""
-    players_to_check = {p.name.lower() for p in players}
+    players_to_check = PlayerPool(players)
     for exclusion in exclusion_set:
-        exclusion_to_compare = {elem.lower() for elem in exclusion}
-        if exclusion_to_compare.issubset(players_to_check):
+        exclusion_pool = PlayerPool(exclusion)
+        if players_to_check.contains_pool(exclusion_pool):
             return exclusion
     return None
 
 
 def _get_match_exclusion_set_players(
-    all_players: List[Player], group: _PlayerGroup, exclusion_set: List[Set[str]]
+    all_players: List[Player], group: _PlayerGroup, exclusion_set: list[list[Player]]
 ) -> Set[str]:
     """Given a list of all players and a group of players, return all players who CANNOT be put on the team."""
     to_exclude: Set[str] = set()
     for player in all_players:
-        # TODO this lower is kind of annoying maybe we should standardize somehow
-        possible_team = set([p.player for p in group.players] + [player])
+        possible_team = [p.player for p in group.players] + [player]
         if _contains_exclusion_set(possible_team, exclusion_set) is not None:
             to_exclude.add(player.name)
     return to_exclude
@@ -256,7 +256,7 @@ def _assign_players_with_exclusion_set(
     groups_to_skip: List[_PlayerGroup],
     possible_players: List[Player],
     role: PlayerRole,
-    exclusion_set: List[Set[str]],
+    exclusion_set: list[list[Player]],
     role_averages: Dict[PlayerRole, float],
     use_uniform_sampling: bool,
 ) -> List[PlayerAssignment]:
@@ -351,20 +351,20 @@ def _assign_players_with_exclusion_set(
 
 
 def assign_players_to_teams(
-    players: Set[Player],
+    player_pool: PlayerPool,
     inclusion_set: List[List[PlayerAssignment]],
-    exclusion_set: List[Set[str]],
+    exclusion_set: list[list[Player]],
     use_uniform_sampling: bool = False,
 ) -> List[Team]:
     # Find the minimum number of teams required.
-    total_teams = math.ceil(len(players) / 5)
+    total_teams = math.ceil(player_pool.num_players / 5)
 
     # Get the averages per role
-    role_averages = roles_to_average_score(players)
-    players_to_select = list(players)
+    role_averages = roles_to_average_score(player_pool.players)
+    players_to_select = player_pool.players
     # Remove the people in the inclusion set from the overall set, and also check it does not violate the exclusion set.
     for inclusion in inclusion_set:
-        excluded = _contains_exclusion_set({p.player for p in inclusion}, exclusion_set)
+        excluded = _contains_exclusion_set([p.player for p in inclusion], exclusion_set)
         if excluded is not None:
             raise ValueError(f"Can't assign teams when inclusion set: {inclusion} violates exclusion set: {excluded}")
         players_to_select = _remove_subset_from_players(players_to_select, inclusion)

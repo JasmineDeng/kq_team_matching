@@ -1,11 +1,11 @@
-from typing import Dict, List, Set
+from typing import Dict, List
 
 import matplotlib.pyplot as plt  # type: ignore
 
 from src.data_types.player import Player, PlayerRole
 
 
-def primary_role_score_histogram(players: Set[Player]) -> None:
+def primary_role_score_histogram(players: list[Player]) -> None:
     bins = list(range(11))  # 0-10 (inclusive) since scores are roughly 1-10
 
     role_to_scores: Dict[PlayerRole, List[float]] = {role: [] for role in PlayerRole}
