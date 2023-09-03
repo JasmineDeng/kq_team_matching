@@ -21,9 +21,9 @@ def test_happy_find_fills() -> None:
     )
     all_players = team.players + team_with_fill.players
     with pytest.raises(ValueError):
-        find_fills(team_with_fill, set(p.player for p in all_players), [team])
+        find_fills(team_with_fill, [p.player for p in all_players], [team])
     # No fill needed
-    assert find_fills(team, set(p.player for p in all_players), [team, team_with_fill]) == []
+    assert find_fills(team, [p.player for p in all_players], [team, team_with_fill]) == []
 
     team_with_fill = Team(
         players=[
@@ -34,5 +34,5 @@ def test_happy_find_fills() -> None:
         ]
     )
     all_players = team.players + team_with_fill.players
-    fills = find_fills(team_with_fill, set(p.player for p in all_players), [team])
+    fills = find_fills(team_with_fill, [p.player for p in all_players], [team])
     assert fills[0].player.name == "4"
