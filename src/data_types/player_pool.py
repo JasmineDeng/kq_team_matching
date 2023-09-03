@@ -30,7 +30,8 @@ class PlayerPool:
         all_names = set([p.name for p in players])
         if len(all_names) != len(players):
             raise ValueError(
-                f"Duplicate player names found in player pool. Had {len(players)} players, but only {len(all_names)} unique, case-insensitive names. All names were: {[p.name for p in players]}"
+                f"Duplicate player names found in player pool. Had {len(players)} players, but only {len(all_names)} "
+                f"unique, case-insensitive names. All names were: {[p.name for p in players]}"
             )
         # Store players in a dict with lowercase names/whitespace stripped names as keys
         self._name_to_players = {self._get_cleaned_key(p.name): p for p in players}
@@ -58,7 +59,8 @@ class PlayerPool:
         name_key = self._get_aliased_key(name)
         if name_key not in self._name_to_players:
             raise ValueError(
-                f"Could not find player with name {name}, possible aliases: {self._name_aliases} and possible names: {self._all_names}"
+                f"Could not find player with name {name}, possible aliases: {self._name_aliases} and possible names: "
+                f"{self._all_names}"
             )
         return self._name_to_players[name_key]
 
@@ -90,3 +92,10 @@ class PlayerPool:
     def contains_pool(self, other_pool: "PlayerPool") -> bool:
         """Return True if this pool contains all players in the other pool."""
         return all([self.contains_player(p.name) for p in other_pool.players])
+
+    @classmethod
+    def remove_subset_from(cls, player_pool: "PlayerPool", players: list[Player]) -> "PlayerPool":
+        """Return a new player pool with the given players removed."""
+        subset_to_remove = cls(players)
+        new_players = [p for p in player_pool.players if not subset_to_remove.contains_player(p.name)]
+        return cls(new_players)

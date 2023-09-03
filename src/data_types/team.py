@@ -314,7 +314,10 @@ def read_teams_from_csv(csv_path: str, player_pool: PlayerPool) -> list[Team]:
             if stripped_row:
                 serialized_team.append(row)
             if row_count == Team.NUM_ROWS_SERIALIZED:
-                teams.append(Team.from_csv(serialized_team, player_pool))
+                deserialized_team = Team.from_csv(serialized_team, player_pool)
+                teams.append(deserialized_team)
+
+                player_pool = PlayerPool.remove_subset_from(player_pool, [p.player for p in deserialized_team.players])
                 serialized_team = []
 
                 row_count = 0

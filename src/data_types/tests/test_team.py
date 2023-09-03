@@ -174,6 +174,29 @@ def test_multi_team_csv_serialization(team_list: list[Team], tmpdir: py.path.loc
         _assert_teams_equal(expected_team, team)
 
 
+def test_multi_team_csv_duplicate_player(tmpdir: py.path.local) -> None:
+    first_team = [
+        Player("A", primary_role=PlayerRole.QUEEN, ranking=get_fake_ranking()),
+        Player("B", primary_role=PlayerRole.FLEX, ranking=get_fake_ranking()),
+        Player("C", primary_role=PlayerRole.OBJECTIVE, ranking=get_fake_ranking()),
+        Player("D", primary_role=PlayerRole.SPEED, ranking=get_fake_ranking()),
+    ]
+    second_team = [
+        first_team[0],
+        Player("E", primary_role=PlayerRole.FLEX, ranking=get_fake_ranking()),
+        Player("F", primary_role=PlayerRole.OBJECTIVE, ranking=get_fake_ranking()),
+        Player("G", primary_role=PlayerRole.SPEED, ranking=get_fake_ranking()),
+    ]
+    team_list = [_player_list_to_team(first_team), _player_list_to_team(second_team)]
+
+    output_path = f"{tmpdir}/test.csv"
+    all_players: list[PlayerAssignment] = [p.to_primary_role_assignment() for p in first_team + second_team[1:]]
+
+    write_teams_to_csv(output_path, team_list)
+    with pytest.raises(ValueError):
+        read_teams_from_csv(output_path, PlayerPool([p.player for p in all_players]))
+
+
 def test_is_num_assignments_valid() -> None:
     # For speed, we require at least the number of players.
     assert TeamComposition.is_num_assignments_valid(PlayerRole.SPEED, 1, 1)
