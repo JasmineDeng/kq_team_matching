@@ -169,8 +169,3 @@ def load_inclusion_set(csv_path: str, player_info: Dict[str, Player]) -> List[Li
                 TeamComposition.validate_team(team, allow_missing=True)
                 inclusion_set.append(team)
     return inclusion_set
-
-
-if __name__ == "__main__":
-    players = load_data("data/test_data.csv")
-    print(load_inclusion_set("data/inclusion_set.csv", players))

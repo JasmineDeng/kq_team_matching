@@ -246,10 +246,12 @@ class Team:
         return to_return
 
     @classmethod
-    def from_csv(cls, csv_data: list[list[str]], players: list[Player]) -> "Team":
+    def from_csv(cls, csv_data: list[list[str]], players: dict[str, Player]) -> "Team":
         name_to_role = {}
         name_to_score = {}
         name_to_weighted_score = {}
+
+        ordered_names = []
         for row in csv_data:
             team_row = _SerializedTeamRow(*row)  # type: ignore
             # Assume that these rows contain the total scores
@@ -260,20 +262,29 @@ class Team:
             name_to_role[team_row.name] = PlayerRole[team_row.role]
             name_to_score[team_row.name] = float(team_row.score)
             name_to_weighted_score[team_row.name] = float(team_row.weighted_score)
+            # Append the role to the ordered roles list, so we can also deserialize in order.
+            ordered_names.append(team_row.name)
 
         team_players = []
-        for p in players:
-            if p.name in name_to_role:
-                player_role = name_to_role[p.name]
-                assignment = PlayerAssignment(player=p, assigned_role=player_role)
-                if (
-                    assignment.score != name_to_score[p.name]
-                    or assignment.weighted_score != name_to_weighted_score[p.name]
-                ):
-                    logging.warning(
-                        f"Score mismatch for player {p.name}, expected {name_to_score[p.name]}, weighted {name_to_weighted_score[p.name]}, but got {assignment.score}. Was their score updated?"
-                    )
-                team_players.append(assignment)
+
+        for player_name in ordered_names:
+            # This should never raise an error if we are properly constructing the dicts.
+            if player_name not in name_to_role:
+                raise ValueError(f"Player role {player_name} not found in role list! Got: {list(name_to_role.keys())}.")
+            player_role = name_to_role[player_name]
+            if player_name.lower() not in players:
+                raise ValueError(f"Player {player_name} not found in player list! Got: {list(players.keys())} names.")
+
+            assignment = PlayerAssignment(player=players[player_name.lower()], assigned_role=player_role)
+            if (
+                assignment.score != name_to_score[player_name]
+                or assignment.weighted_score != name_to_weighted_score[player_name]
+            ):
+                logging.warning(
+                    f"Score mismatch for player {player_name}, expected {name_to_score[player_name]}, weighted "
+                    f"{name_to_weighted_score[player_name]}, but got {assignment.score}. Was their score updated?"
+                )
+            team_players.append(assignment)
         return cls(team_players)
 
 
@@ -283,6 +294,31 @@ def write_teams_to_csv(output_file_name: str, teams: list[Team]) -> None:
         for team in teams:
             writer.writerows(team.to_csv())
             writer.writerow([])
+
+
+def read_teams_from_csv(csv_path: str, all_players: Dict[str, Player]) -> list[Team]:
+    """Given a csv, load a list of teams."""
+    teams = []
+    with open(csv_path, "r") as f:
+        reader = csv.reader(f)
+        # Assume we go a certain number of rows at a time.
+        serialized_team: list[list[str]] = []
+        row_count = 0
+        for row in reader:
+            stripped_row = [elem for elem in row if elem]
+            is_empty_row = len(row) == 0
+            # If it's not an empty row, it must have been serialized, and we count this.
+            # Some rows will be empty when stripped because they are a fill player and do not exist.
+            if not is_empty_row:
+                row_count += 1
+            if stripped_row:
+                serialized_team.append(row)
+            if row_count == Team.NUM_ROWS_SERIALIZED:
+                teams.append(Team.from_csv(serialized_team, all_players))
+                serialized_team = []
+
+                row_count = 0
+    return teams
 
 
 def serialize_players_in_order(player_assignments: list[PlayerAssignment]) -> list[_SerializedTeamRow]:

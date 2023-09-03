@@ -1,4 +1,3 @@
-import csv
 import datetime
 import os
 
@@ -6,7 +5,7 @@ import click
 
 from src.assignment import PlayerSamplingStrategy, assign_players_to_teams
 from src.cli_utils import prompt_yes_no
-from src.data_types.team import Team, TeamComposition, roles_to_average_score, write_teams_to_csv
+from src.data_types.team import TeamComposition, read_teams_from_csv, roles_to_average_score, write_teams_to_csv
 from src.find_fills import find_fills
 from src.load_data import load_attendance, load_data, load_exclusion_set, load_inclusion_set
 from src.visualization.scores import primary_role_score_histogram
@@ -102,33 +101,13 @@ def recompute(ranking_file_path: str, file_path: str | None) -> None:
         csv_dates = [csv_file for csv_file in all_league_night_csvs if _parse_datetime(csv_file) is not None]
         file_path = os.path.join(os.path.dirname(__file__), "data", "league_night", sorted(csv_dates)[-1])
 
-    players = list(load_data(ranking_file_path).values())
-    teams = []
-
-    with open(file_path, "r") as f:
-        reader = csv.reader(f)
-        # Assume we go a certain number of rows at a time.
-        serialized_team: list[list[str]] = []
-        row_count = 0
-        for row in reader:
-            stripped_row = [elem for elem in row if elem]
-            is_empty_row = len(row) == 0
-            # If it's not an empty row, it must have been serialized, and we count this.
-            # Some rows will be empty when stripped because they are a fill player and do not exist.
-            if not is_empty_row:
-                row_count += 1
-            if stripped_row:
-                serialized_team.append(row)
-            if row_count == Team.NUM_ROWS_SERIALIZED:
-                teams.append(Team.from_csv(serialized_team, players))
-                serialized_team = []
-
-                row_count = 0
+    players = load_data(ranking_file_path)
+    teams = read_teams_from_csv(file_path, players)
 
     for t in teams:
         print(t)
 
-    print("Overwrite the existing file with new data? If no, then the current teams are not saved.")
+    print("Overwrite the existing file with new data? If no, then the current scores are not saved.")
     if prompt_yes_no():
         write_teams_to_csv(file_path, teams)
 
