@@ -1,4 +1,6 @@
+import logging
 import math
+import os
 import random
 from typing import Callable, Dict, List, NamedTuple, Optional, Set, Tuple
 
@@ -6,6 +8,10 @@ from src.data_types.player import BasePlayerAssignment, Player, PlayerAssignment
 from src.data_types.player_pool import PlayerPool
 from src.data_types.team import Team, TeamComposition, roles_to_average_score
 from src.sampling import PlayerSamplingStrategy, get_players_for_role, sample_players
+
+log_level = os.environ.get("LOG_LEVEL", "INFO")
+logging.basicConfig(level=getattr(logging, log_level))
+logger = logging.getLogger(__name__)
 
 
 class _PlayerGroup(BasePlayerAssignment):
@@ -188,7 +194,7 @@ def _get_player_for_ideal_score(
         players_minus_exclusion = player_assignments
     # Get as close to the ideal score as possible
     sorted_players = sorted(players_minus_exclusion, key=lambda p: abs(ideal_score - p.weighted_score))
-    print([abs(ideal_score - p.weighted_score) for p in sorted_players])
+    logger.debug([abs(ideal_score - p.weighted_score) for p in sorted_players])
     if len(sorted_players) == 0:
         return None
     return sorted_players[0]
@@ -269,7 +275,7 @@ def _assign_players_with_exclusion_set(
     groups_without_exclusion = []
     for group in groups_to_assign:
         group_exclusion_set = _get_match_exclusion_set_players(possible_players, group, exclusion_set)
-        print(f"Excluding {group_exclusion_set} for group {group}")
+        logger.debug(f"Excluding {group_exclusion_set} for group {group}")
         if len(group_exclusion_set) > 0:
             groups_with_exclusion.append(_GroupWithExclusions(group=group, to_exclude=group_exclusion_set))
         else:
@@ -304,12 +310,12 @@ def _assign_players_with_exclusion_set(
             to_exclude=exclude_group.to_exclude,
         )
         if assignment is None:
-            print(f"Skipping assignment for {exclude_group}, role {role}, ideal score {ideal_score}")
+            logger.debug(f"Skipping assignment for {exclude_group}, role {role}, ideal score {ideal_score}")
             continue
         exclude_group.group.players.append(assignment)
         assigned_players.append(assignment)
         possible_players = PlayerPool.remove_subset_from(possible_players, [assignment.player])
-        print(
+        logger.debug(
             f"Excluding {exclude_group.to_exclude}, picked {assignment} for team {exclude_group.group}, "
             f"ideal score: {ideal_score}"
         )
@@ -330,7 +336,7 @@ def _assign_players_with_exclusion_set(
 
     skipped_groups = groups_without_exclusion[ind + 1 :]
     if len(skipped_groups) > 0:
-        print(f"fills required for: {skipped_groups}")
+        logger.debug(f"fills required for: {skipped_groups}")
     return assigned_players
 
 
@@ -369,12 +375,12 @@ def assign_players_to_teams(
             for group in player_groups
             if player_role not in TeamComposition.remaining_roles_required(group.players)
         ]
-        print(f"Assigning {player_role.name}, skipping groups: {groups_to_skip}")
+        logger.debug(f"Assigning {player_role.name}, skipping groups: {groups_to_skip}")
         # Then remove them from the player group list
         groups_to_assign = [
             group for group in player_groups if player_role in TeamComposition.remaining_roles_required(group.players)
         ]
-        print(f"Assigning {player_role.name} for groups {groups_to_assign}")
+        logger.debug(f"Assigning {player_role.name} for groups {groups_to_assign}")
 
         # if you can play speed, you can flex
         valid_roles = [player_role] if player_role != PlayerRole.FLEX else [PlayerRole.FLEX, PlayerRole.SPEED]
