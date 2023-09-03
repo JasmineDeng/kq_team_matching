@@ -79,7 +79,7 @@ def load_attendance(csv_path: str, player_pool: PlayerPool) -> PlayerPool:
     return PlayerPool(player_list)
 
 
-def load_exclusion_set(csv_path: str, player_pool: PlayerPool) -> list[list[Player]]:
+def load_exclusion_set(csv_path: str, player_pool: PlayerPool) -> list[PlayerPool]:
     """Given a csv, load sets of people who should not play on the same team."""
     exclusion_set = []
     with open(csv_path, newline="") as csvfile:
@@ -88,7 +88,7 @@ def load_exclusion_set(csv_path: str, player_pool: PlayerPool) -> list[list[Play
         for row in reader:
             player1 = player_pool.get_player(row[0])
             player2 = player_pool.get_player(row[1])
-            exclusion_set.append([player1, player2])
+            exclusion_set.append(PlayerPool([player1, player2]))
 
     return exclusion_set
 

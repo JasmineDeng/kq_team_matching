@@ -1,6 +1,6 @@
 from typing import List, Set
 
-from src.data_types.player import Player
+from src.data_types.player import Player, PlayerRole
 
 NAME_ALIASES: List[Set[str]] = [
     {"Matt", "Matthew", "Matt Wu"},
@@ -94,8 +94,23 @@ class PlayerPool:
         return all([self.contains_player(p.name) for p in other_pool.players])
 
     @classmethod
+    def filter(cls, player_pool: "PlayerPool", primary_roles: list[PlayerRole] | None = None) -> "PlayerPool":
+        """Return a new player pool containing only players with the given roles."""
+        players = [p for p in player_pool.players if primary_roles is None or p.primary_role in primary_roles]
+        return cls(players)
+
+    @classmethod
+    def add(cls, player_pool: "PlayerPool", players: list[Player]) -> "PlayerPool":
+        """Return a new player pool with the given players added."""
+        new_players = player_pool.players + players
+        return cls(new_players)
+
+    @classmethod
     def remove_subset_from(cls, player_pool: "PlayerPool", players: list[Player]) -> "PlayerPool":
         """Return a new player pool with the given players removed."""
         subset_to_remove = cls(players)
         new_players = [p for p in player_pool.players if not subset_to_remove.contains_player(p.name)]
         return cls(new_players)
+
+    def __str__(self) -> str:
+        return f"PlayerPool({self.players})"
