@@ -6,7 +6,13 @@ import click
 
 from src.assignment import PlayerSamplingStrategy, assign_players_to_teams
 from src.cli_utils import prompt_yes_no
-from src.data_types.team import TeamComposition, read_teams_from_csv, roles_to_average_score, write_teams_to_csv
+from src.data_types.team import (
+    SpeedTeamComposition,
+    ThreeFlexTeamComposition,
+    read_teams_from_csv,
+    roles_to_average_score,
+    write_teams_to_csv,
+)
 from src.find_fills import find_fills
 from src.load_data import load_attendance, load_data, load_exclusion_set, load_inclusion_set
 from src.visualization.scores import primary_role_score_histogram
@@ -39,14 +45,29 @@ def cli() -> None:
     required=True,
     help="File path to csv file with player rankings.",
 )
-def assign(file_path: str) -> None:
-    player_infos = load_data(file_path)
+@click.option(
+    "--use-flex-role-for-speed",
+    "-s",
+    is_flag=True,
+    default=False,
+    help="If True, ignore the speed role and instead take the top NUM_TEAMS flex players.",
+)
+def assign(file_path: str, use_flex_role_for_speed: bool) -> None:
+    player_infos = load_data(file_path, use_flex_role_for_speed=use_flex_role_for_speed)
     player_pool = load_attendance("data/attendance.csv", player_infos)
 
-    inclusion_set = load_inclusion_set("data/inclusion_set.csv", player_pool)
+    team_composition = ThreeFlexTeamComposition if use_flex_role_for_speed else SpeedTeamComposition
+
+    inclusion_set = load_inclusion_set("data/inclusion_set.csv", player_pool, team_composition=team_composition)
     exclusion_set = load_exclusion_set("data/exclusion_set.csv", player_infos)
     print(f"Loaded exclusion set: {[[p.name for p in e.players] for e in exclusion_set]}")
-    teams = assign_players_to_teams(player_pool, inclusion_set, exclusion_set)
+    teams = assign_players_to_teams(
+        player_pool,
+        inclusion_set,
+        exclusion_set,
+        use_flex_role_for_speed=use_flex_role_for_speed,
+        team_composition=team_composition,
+    )
     teams = sorted(teams, key=lambda t: t.total_score)
     for t in teams:
         print(t)
@@ -62,12 +83,12 @@ def assign(file_path: str) -> None:
     print(f"All weighted scores (in order): {[t.total_weighted_score for t in teams]}")
 
     averages = roles_to_average_score(player_pool.players)
-    print(f"Summed average: {TeamComposition.total_score_for_ranking(averages)}")
-    print(f"Summed weighted average: {TeamComposition.weighted_score_for_ranking(averages)}")
+    print(f"Summed average: {team_composition.total_score_for_ranking(averages)}")
+    print(f"Summed weighted average: {team_composition.weighted_score_for_ranking(averages)}")
 
     for t in teams:
         if t.needs_fill:
-            possible_fills = find_fills(t, player_pool.players, teams)
+            possible_fills = find_fills(t, player_pool.players, teams, team_composition=team_composition)
             print(f"For team {t.team_name}, possible fills: {possible_fills}")
             subsample = possible_fills[:2]
             print(f"Randomly chosen two fills: {subsample}")

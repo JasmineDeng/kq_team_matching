@@ -48,14 +48,9 @@ def roles_to_average_score(all_players: list[Player]) -> Dict[PlayerRole, float]
 
 
 class TeamComposition:
-
-    roles: List[PlayerRole] = [
-        PlayerRole.QUEEN,
-        PlayerRole.SPEED,
-        PlayerRole.FLEX,
-        PlayerRole.FLEX,
-        PlayerRole.OBJECTIVE,
-    ]
+    @classmethod
+    def get_roles(cls) -> list[PlayerRole]:
+        raise NotImplementedError("Must be implemented by subclass")
 
     @classmethod
     def role_metadata(cls) -> dict[PlayerRole, PlayerRoleMetadata]:
@@ -66,14 +61,14 @@ class TeamComposition:
             PlayerRoleMetadata(role=PlayerRole.OBJECTIVE, allows_fill=False, requires_exact_count=True),
         ]
         roles_to_return = [val.role for val in metadata_list]
-        assert all(role in cls.roles for role in roles_to_return)
+        assert all(role in roles_to_return for role in cls.get_roles())
         metadata_dict = {val.role: val for val in metadata_list}
         return metadata_dict
 
     @classmethod
     def get_role_metadata(cls, role: PlayerRole) -> PlayerRoleMetadata:
         if role not in cls.role_metadata():
-            raise ValueError(f"Invalid role {role}, not in team composition {cls.roles}")
+            raise ValueError(f"Invalid role {role}, not in team composition {cls.get_roles()}")
         return cls.role_metadata()[role]
 
     @classmethod
@@ -84,18 +79,18 @@ class TeamComposition:
     def role_counts(cls) -> List[Tuple[PlayerRole, int]]:
         """Return a list of the role and the corresponding count in the same order as the roles list."""
         counts: Dict[PlayerRole, int] = defaultdict(int)
-        for role in cls.roles:
+        for role in cls.get_roles():
             counts[role] += 1
         return [(role, counts[role]) for role in counts]
 
     @classmethod
     def total_score_for_ranking(cls, ranking: Dict[PlayerRole, float]) -> float:
-        score_list = [ranking[role] for role in cls.roles]
+        score_list = [ranking[role] for role in cls.get_roles()]
         return round(sum(score_list), 2)
 
     @classmethod
     def weighted_score_for_ranking(cls, ranking: Dict[PlayerRole, float]) -> float:
-        score_list = [Player.weighted_score_for_role(role, ranking[role]) for role in cls.roles]
+        score_list = [Player.weighted_score_for_role(role, ranking[role]) for role in cls.get_roles()]
         return round(sum(score_list), 2)
 
     @classmethod
@@ -124,7 +119,7 @@ class TeamComposition:
     def remaining_roles_required(cls, players: List[PlayerAssignment]) -> List[PlayerRole]:
         missing_roles = []
         current_role_counts: Dict[PlayerRole, int] = defaultdict(int)
-        expected_role_counts: Dict[PlayerRole, int] = {key: val for key, val in TeamComposition.role_counts()}
+        expected_role_counts: Dict[PlayerRole, int] = {key: val for key, val in cls.role_counts()}
         for p in players:
             current_role_counts[p.assigned_role] += 1
         for role, count in expected_role_counts.items():
@@ -155,6 +150,30 @@ class TeamComposition:
         return True
 
 
+class SpeedTeamComposition(TeamComposition):
+    @classmethod
+    def get_roles(cls) -> List[PlayerRole]:
+        return [
+            PlayerRole.QUEEN,
+            PlayerRole.SPEED,
+            PlayerRole.FLEX,
+            PlayerRole.FLEX,
+            PlayerRole.OBJECTIVE,
+        ]
+
+
+class ThreeFlexTeamComposition(TeamComposition):
+    @classmethod
+    def get_roles(cls) -> List[PlayerRole]:
+        return [
+            PlayerRole.QUEEN,
+            PlayerRole.FLEX,
+            PlayerRole.FLEX,
+            PlayerRole.FLEX,
+            PlayerRole.OBJECTIVE,
+        ]
+
+
 class Team:
 
     NUM_ROWS_SERIALIZED = 6
@@ -163,10 +182,11 @@ class Team:
     Presently, we have one row for the player names and one row for the scores.
     """
 
-    def __init__(self, players: List[PlayerAssignment]) -> None:
+    def __init__(self, players: List[PlayerAssignment], team_composition: type[TeamComposition]) -> None:
         self.players = players
 
-        TeamComposition.validate_team(self.players, allow_missing=True)
+        self._team_composition = team_composition
+        self._team_composition.validate_team(self.players, allow_missing=True)
 
         self._queen = self._get_role(PlayerRole.QUEEN)
         self._speed = self._get_role(PlayerRole.SPEED)
@@ -211,7 +231,7 @@ class Team:
             PlayerRole.FLEX: "Flex ",
         }
         to_return = ""
-        for role, count in TeamComposition.role_counts():
+        for role, count in self._team_composition.role_counts():
             player = [p for p in self.players if p.assigned_role == role]
             assert len(player) <= count
             for p in player:

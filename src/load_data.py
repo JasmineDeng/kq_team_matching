@@ -15,7 +15,7 @@ def _try_to_float(value: str, default_value: int = 1) -> float:
         return default_value
 
 
-def load_data(csv_path: str) -> PlayerPool:
+def load_data(csv_path: str, use_flex_role_for_speed: bool = False) -> PlayerPool:
     column_name_to_role = {
         "queen rank": PlayerRole.QUEEN,
         "flex rank": PlayerRole.FLEX,
@@ -31,6 +31,10 @@ def load_data(csv_path: str) -> PlayerPool:
             primary_role = PlayerRole[row["Primary Role"].upper()]
 
             ranking_dict = {role: row[key] for key, role in column_name_to_role.items()}
+
+            if use_flex_role_for_speed:
+                primary_role = PlayerRole.FLEX
+
             # convert values to floats
             float_ranking_dict = {key: _try_to_float(value) for key, value in ranking_dict.items()}
 
@@ -93,7 +97,9 @@ def load_exclusion_set(csv_path: str, player_pool: PlayerPool) -> list[PlayerPoo
     return exclusion_set
 
 
-def load_inclusion_set(csv_path: str, player_pool: PlayerPool) -> List[List[PlayerAssignment]]:
+def load_inclusion_set(
+    csv_path: str, player_pool: PlayerPool, team_composition: type[TeamComposition]
+) -> List[List[PlayerAssignment]]:
     inclusion_set = []
 
     role_to_csv_title = {
@@ -103,6 +109,7 @@ def load_inclusion_set(csv_path: str, player_pool: PlayerPool) -> List[List[Play
         PlayerRole.FLEX: "Flex",
     }
     role_to_ind = {}
+    team_composition_role_to_ind = {role: i for i, role in enumerate(team_composition.get_roles())}
     with open(csv_path, newline="") as csvfile:
         reader = csv.reader(csvfile)
         field_names = next(reader)
@@ -123,6 +130,6 @@ def load_inclusion_set(csv_path: str, player_pool: PlayerPool) -> List[List[Play
                         )
                     team.append(PlayerAssignment(player, assigned_role=role))
             if team:
-                TeamComposition.validate_team(team, allow_missing=True)
+                team_composition.validate_team(team, allow_missing=True)
                 inclusion_set.append(team)
     return inclusion_set
