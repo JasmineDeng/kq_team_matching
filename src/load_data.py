@@ -2,7 +2,6 @@ import csv
 from typing import Dict, List, Optional, Set
 
 from src.data_types.player import Player, PlayerAssignment, PlayerRole
-from src.data_types.team import TeamComposition
 
 NAME_ALIASES: List[Set[str]] = [
     {"Matt", "Matthew", "Matt Wu"},
@@ -166,7 +165,7 @@ def load_inclusion_set(csv_path: str, player_info: Dict[str, Player]) -> List[Li
                         )
                     team.append(PlayerAssignment(player, assigned_role=role))
             if team:
-                TeamComposition.validate_team(team, allow_missing=True)
+                # TeamComposition.validate_team(team)
                 inclusion_set.append(team)
     return inclusion_set
 
