@@ -1,9 +1,10 @@
 import csv
 import logging
 from collections import defaultdict
-from typing import Dict, List, NamedTuple, Optional, Set, Tuple
+from typing import Dict, List, NamedTuple, Optional, Tuple
 
 from src.data_types.player import Player, PlayerAssignment, PlayerRole
+from src.data_types.player_pool import PlayerPool
 
 
 class _SerializedTeamRow(NamedTuple):
@@ -14,12 +15,29 @@ class _SerializedTeamRow(NamedTuple):
 
 
 class PlayerRoleMetadata(NamedTuple):
+    """Metadata about a player role, such as if they allow a fill."""
+
     role: PlayerRole
+    """The role this metadata is for."""
+
     allows_fill: bool
+    """If True, then this role can have a 'fill' player on a team.
+
+    This means that if the TeamComposition specifies 2 players for a certain role, and a fill is allowed, then there can
+    be 0, 1, or 2 players on the team with that role. If no fills are allowed, then there must be exactly 2 players with
+    that role on the team.
+    """
+
     requires_exact_count: bool
+    """If True, then this role must have the exact number of players defined in the TeamComposition during assignment.
+
+    For example, for QUEEN and OBJECTIVE we may want exactly one queen per team, and one objective per team, so we
+    require the number of players with those roles to be exactly the number of teams. But for other roles, like SPEED,
+    because SPEED players can also FLEX, we can have more players assigned SPEED than the number of teams.
+    """
 
 
-def roles_to_average_score(all_players: Set[Player]) -> Dict[PlayerRole, float]:
+def roles_to_average_score(all_players: list[Player]) -> Dict[PlayerRole, float]:
     role_to_players: Dict[PlayerRole, List[float]] = {}
     for player in all_players:
         if player.primary_role not in role_to_players:
@@ -40,23 +58,27 @@ class TeamComposition:
     ]
 
     @classmethod
-    def role_metadata(cls) -> List[PlayerRoleMetadata]:
-        to_return = [
+    def role_metadata(cls) -> dict[PlayerRole, PlayerRoleMetadata]:
+        metadata_list = [
             PlayerRoleMetadata(role=PlayerRole.QUEEN, allows_fill=False, requires_exact_count=True),
             PlayerRoleMetadata(role=PlayerRole.SPEED, allows_fill=False, requires_exact_count=False),
             PlayerRoleMetadata(role=PlayerRole.FLEX, allows_fill=True, requires_exact_count=False),
             PlayerRoleMetadata(role=PlayerRole.OBJECTIVE, allows_fill=False, requires_exact_count=True),
         ]
-        roles_to_return = [val.role for val in to_return]
+        roles_to_return = [val.role for val in metadata_list]
         assert all(role in cls.roles for role in roles_to_return)
-        return to_return
+        metadata_dict = {val.role: val for val in metadata_list}
+        return metadata_dict
+
+    @classmethod
+    def get_role_metadata(cls, role: PlayerRole) -> PlayerRoleMetadata:
+        if role not in cls.role_metadata():
+            raise ValueError(f"Invalid role {role}, not in team composition {cls.roles}")
+        return cls.role_metadata()[role]
 
     @classmethod
     def role_allows_fill(cls, role: PlayerRole) -> bool:
-        for metadata in cls.role_metadata():
-            if metadata.role == role:
-                return metadata.allows_fill
-        raise ValueError(f"Invalid role {role}, not in team composition {cls.roles}")
+        return cls.get_role_metadata(role).allows_fill
 
     @classmethod
     def role_counts(cls) -> List[Tuple[PlayerRole, int]]:
@@ -77,19 +99,21 @@ class TeamComposition:
         return round(sum(score_list), 2)
 
     @classmethod
-    def validate_team(cls, team: List[PlayerAssignment]) -> None:
+    def validate_team(cls, team: List[PlayerAssignment], allow_missing: bool = False) -> None:
         role_counts = {role: count for role, count in cls.role_counts()}
-        role_to_metadata = {metadata.role: metadata for metadata in cls.role_metadata()}
 
         team_counts: Dict[PlayerRole, float] = defaultdict(int)
         for player in team:
             team_counts[player.assigned_role] += 1
+        # If diff > 0, then the team has extra players, otherwise they are missing a player.
         team_player_diff: Dict[PlayerRole, float] = {
             role: team_counts[role] - role_counts[role] for role in role_counts
         }
         err_str = ""
         for role, diff in team_player_diff.items():
-            allows_fill = role_to_metadata[role].allows_fill
+            if allow_missing and diff < 0:
+                continue
+            allows_fill = cls.role_allows_fill(role)
             if (not allows_fill and diff != 0) or (allows_fill and diff > 0):
                 err_str += f"Should have had {role_counts[role]} players {role.name} but got {team_counts[role]}!\n"
         if err_str:
@@ -114,6 +138,22 @@ class TeamComposition:
                 missing_roles.extend([role] * diff)
         return missing_roles
 
+    @classmethod
+    def is_num_assignments_valid(cls, role: PlayerRole, num_teams: int, num_assignments: int) -> bool:
+        role_metadata = cls.get_role_metadata(role)
+        # Two scenarios:
+        # 1. The role requires an exact count, so the number of assignments must be equal to the number of teams.
+        # 2. The role does not require an exact count, but if the role does not allow fills, then the number of
+        #   assignments must be equal to the number of teams.
+        # We do not consider the case where the number of assignments is greater than the number of teams.
+        if role_metadata.requires_exact_count:
+            return num_assignments == num_teams
+        # Now the role does not require exact count, but cannot have fills.
+        if not role_metadata.allows_fill:
+            return num_assignments >= num_teams
+        # If it does allow fills, then it can have any number.
+        return True
+
 
 class Team:
 
@@ -126,7 +166,7 @@ class Team:
     def __init__(self, players: List[PlayerAssignment]) -> None:
         self.players = players
 
-        TeamComposition.validate_team(self.players)
+        TeamComposition.validate_team(self.players, allow_missing=True)
 
         self._queen = self._get_role(PlayerRole.QUEEN)
         self._speed = self._get_role(PlayerRole.SPEED)
@@ -192,17 +232,14 @@ class Team:
     def __repr__(self) -> str:
         return str(self)
 
-    def to_csv(self) -> list[list[str | float]]:
+    def to_csv(self) -> list[list[str]]:
         serialized_rows = serialize_players_in_order(self.players)
-        to_return = [list(elem) for elem in serialized_rows]
+        to_return: list[list[str]] = [list(elem) for elem in serialized_rows]
         # Add weighted and total scores
-        to_return.append(
-            list(
-                _SerializedTeamRow(
-                    name="", role="", score=str(self.total_score), weighted_score=str(self.total_weighted_score)
-                )
-            )
+        row = _SerializedTeamRow(
+            name="", role="", score=str(self.total_score), weighted_score=str(self.total_weighted_score)
         )
+        to_return.append(list(row))
 
         # Assert the number of serialized rows is correct
         assert len(to_return) == self.NUM_ROWS_SERIALIZED
@@ -210,10 +247,12 @@ class Team:
         return to_return
 
     @classmethod
-    def from_csv(cls, csv_data: list[list[str | float]], players: list[Player]) -> "Team":
+    def from_csv(cls, csv_data: list[list[str]], player_pool: PlayerPool) -> "Team":
         name_to_role = {}
         name_to_score = {}
         name_to_weighted_score = {}
+
+        ordered_names = []
         for row in csv_data:
             team_row = _SerializedTeamRow(*row)
             # Assume that these rows contain the total scores
@@ -224,20 +263,28 @@ class Team:
             name_to_role[team_row.name] = PlayerRole[team_row.role]
             name_to_score[team_row.name] = float(team_row.score)
             name_to_weighted_score[team_row.name] = float(team_row.weighted_score)
+            # Append the role to the ordered roles list, so we can also deserialize in order.
+            ordered_names.append(team_row.name)
 
         team_players = []
-        for p in players:
-            if p.name in name_to_role:
-                player_role = name_to_role[p.name]
-                assignment = PlayerAssignment(player=p, assigned_role=player_role)
-                if (
-                    assignment.score != name_to_score[p.name]
-                    or assignment.weighted_score != name_to_weighted_score[p.name]
-                ):
-                    logging.warning(
-                        f"Score mismatch for player {p.name}, expected {name_to_score[p.name]}, weighted {name_to_weighted_score[p.name]}, but got {assignment.score}. Was their score updated?"
-                    )
-                team_players.append(assignment)
+
+        for player_name in ordered_names:
+            # This should never raise an error if we are properly constructing the dicts.
+            if player_name not in name_to_role:
+                raise ValueError(f"Player role {player_name} not found in role list! Got: {list(name_to_role.keys())}.")
+            player_role = name_to_role[player_name]
+            player = player_pool.get_player(player_name)
+
+            assignment = PlayerAssignment(player=player, assigned_role=player_role)
+            if (
+                assignment.score != name_to_score[player_name]
+                or assignment.weighted_score != name_to_weighted_score[player_name]
+            ):
+                logging.warning(
+                    f"Score mismatch for player {player_name}, expected {name_to_score[player_name]}, weighted "
+                    f"{name_to_weighted_score[player_name]}, but got {assignment.score}. Was their score updated?"
+                )
+            team_players.append(assignment)
         return cls(team_players)
 
 
@@ -249,12 +296,40 @@ def write_teams_to_csv(output_file_name: str, teams: list[Team]) -> None:
             writer.writerow([])
 
 
+def read_teams_from_csv(csv_path: str, player_pool: PlayerPool) -> list[Team]:
+    """Given a csv, load a list of teams."""
+    teams = []
+    with open(csv_path, "r") as f:
+        reader = csv.reader(f)
+        # Assume we go a certain number of rows at a time.
+        serialized_team: list[list[str]] = []
+        row_count = 0
+        for row in reader:
+            stripped_row = [elem for elem in row if elem]
+            is_empty_row = len(row) == 0
+            # If it's not an empty row, it must have been serialized, and we count this.
+            # Some rows will be empty when stripped because they are a fill player and do not exist.
+            if not is_empty_row:
+                row_count += 1
+            if stripped_row:
+                serialized_team.append(row)
+            if row_count == Team.NUM_ROWS_SERIALIZED:
+                deserialized_team = Team.from_csv(serialized_team, player_pool)
+                teams.append(deserialized_team)
+
+                player_pool = PlayerPool.remove_subset_from(player_pool, [p.player for p in deserialized_team.players])
+                serialized_team = []
+
+                row_count = 0
+    return teams
+
+
 def serialize_players_in_order(player_assignments: list[PlayerAssignment]) -> list[_SerializedTeamRow]:
     """Reorder players so that the players are in the same order as the team composition.
 
     This is useful for when you want to compare the same players across different team compositions.
     """
-    role_to_assignments = {role: [] for role in PlayerRole}
+    role_to_assignments: dict[PlayerRole, list[PlayerAssignment]] = {role: [] for role in PlayerRole}
     for p in player_assignments:
         role_to_assignments[p.assigned_role].append(p)
     # Sort by name so that the order is consistent

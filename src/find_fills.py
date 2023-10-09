@@ -1,10 +1,10 @@
-from typing import List, Set
+from typing import List
 
 from src.data_types.player import Player, PlayerAssignment, PlayerRole
 from src.data_types.team import Team, TeamComposition, roles_to_average_score
 
 
-def find_fills(team: Team, all_players: Set[Player], all_teams: List[Team]) -> List[PlayerAssignment]:
+def find_fills(team: Team, all_players: list[Player], all_teams: List[Team]) -> List[PlayerAssignment]:
     """Find a fill, where we're aiming to hit the average score of finalized teams.
 
     We always assume that the fill is a FLEX player.

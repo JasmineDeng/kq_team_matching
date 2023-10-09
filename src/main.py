@@ -1,12 +1,12 @@
-import csv
 import datetime
 import os
+from typing import Any
 
 import click
 
 from src.assignment import PlayerSamplingStrategy, assign_players_to_teams
 from src.cli_utils import prompt_yes_no
-from src.data_types.team import Team, TeamComposition, roles_to_average_score, write_teams_to_csv
+from src.data_types.team import TeamComposition, read_teams_from_csv, roles_to_average_score, write_teams_to_csv
 from src.find_fills import find_fills
 from src.load_data import load_attendance, load_data, load_exclusion_set, load_inclusion_set
 from src.visualization.scores import primary_role_score_histogram
@@ -14,7 +14,7 @@ from src.visualization.scores import primary_role_score_histogram
 DATETIME_FORMAT = "%Y-%m-%d_%H:%M:%S"
 
 
-def _to_player_sampling_enum(_, __, value: str) -> PlayerSamplingStrategy:
+def _to_player_sampling_enum(_: Any, __: Any, value: str) -> PlayerSamplingStrategy:
     return PlayerSamplingStrategy[value]
 
 
@@ -41,13 +41,12 @@ def cli() -> None:
 )
 def assign(file_path: str) -> None:
     player_infos = load_data(file_path)
-    all_names = set(player_infos.keys())
-    all_players = load_attendance("data/attendance.csv", player_infos)
+    player_pool = load_attendance("data/attendance.csv", player_infos)
 
-    inclusion_set = load_inclusion_set("data/inclusion_set.csv", player_infos)
-    exclusion_set = load_exclusion_set("data/exclusion_set.csv", all_names)
-    print(f"Loaded exclusion set: {exclusion_set}")
-    teams = assign_players_to_teams(all_players, inclusion_set, exclusion_set)
+    inclusion_set = load_inclusion_set("data/inclusion_set.csv", player_pool)
+    exclusion_set = load_exclusion_set("data/exclusion_set.csv", player_infos)
+    print(f"Loaded exclusion set: {[[p.name for p in e.players] for e in exclusion_set]}")
+    teams = assign_players_to_teams(player_pool, inclusion_set, exclusion_set)
     teams = sorted(teams, key=lambda t: t.total_score)
     for t in teams:
         print(t)
@@ -62,13 +61,13 @@ def assign(file_path: str) -> None:
     print(f"All scores (in order): {summary_str}")
     print(f"All weighted scores (in order): {[t.total_weighted_score for t in teams]}")
 
-    averages = roles_to_average_score(all_players)
+    averages = roles_to_average_score(player_pool.players)
     print(f"Summed average: {TeamComposition.total_score_for_ranking(averages)}")
     print(f"Summed weighted average: {TeamComposition.weighted_score_for_ranking(averages)}")
 
     for t in teams:
         if t.needs_fill:
-            possible_fills = find_fills(t, all_players, teams)
+            possible_fills = find_fills(t, player_pool.players, teams)
             print(f"For team {t.team_name}, possible fills: {possible_fills}")
             subsample = possible_fills[:2]
             print(f"Randomly chosen two fills: {subsample}")
@@ -102,33 +101,14 @@ def recompute(ranking_file_path: str, file_path: str | None) -> None:
         csv_dates = [csv_file for csv_file in all_league_night_csvs if _parse_datetime(csv_file) is not None]
         file_path = os.path.join(os.path.dirname(__file__), "data", "league_night", sorted(csv_dates)[-1])
 
-    players = list(load_data(ranking_file_path).values())
-    teams = []
-
-    with open(file_path, "r") as f:
-        reader = csv.reader(f)
-        # Assume we go a certain number of rows at a time.
-        serialized_team = []
-        row_count = 0
-        for row in reader:
-            stripped_row = [elem for elem in row if elem]
-            is_empty_row = len(row) == 0
-            # If it's not an empty row, it must have been serialized, and we count this.
-            # Some rows will be empty when stripped because they are a fill player and do not exist.
-            if not is_empty_row:
-                row_count += 1
-            if stripped_row:
-                serialized_team.append(row)
-            if row_count == Team.NUM_ROWS_SERIALIZED:
-                teams.append(Team.from_csv(serialized_team, players))
-                serialized_team = []
-
-                row_count = 0
+    # TODO: make the lowercase more consistent
+    players = load_data(ranking_file_path)
+    teams = read_teams_from_csv(file_path, players)
 
     for t in teams:
         print(t)
 
-    print("Overwrite the existing file with new data? If no, then the current teams are not saved.")
+    print("Overwrite the existing file with new data? If no, then the current scores are not saved.")
     if prompt_yes_no():
         write_teams_to_csv(file_path, teams)
 
@@ -144,7 +124,7 @@ def recompute(ranking_file_path: str, file_path: str | None) -> None:
 def vis_scores(file_path: str) -> None:
     player_infos = load_data(file_path)
     all_players = load_attendance("data/attendance.csv", player_infos)
-    primary_role_score_histogram(all_players)
+    primary_role_score_histogram(all_players.players)
 
 
 if __name__ == "__main__":

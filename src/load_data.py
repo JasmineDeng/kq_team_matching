@@ -1,44 +1,9 @@
 import csv
-from typing import Dict, List, Optional, Set
+from typing import List
 
 from src.data_types.player import Player, PlayerAssignment, PlayerRole
-
-NAME_ALIASES: List[Set[str]] = [
-    {"Matt", "Matthew", "Matt Wu"},
-    {"Chris", "Blue Chris"},
-    {"Maureen", "Mo"},
-    {"Blee", "Brian Lee"},
-    {"BrianM", "Brian M"},
-    {"DerekM", "Derek M"},
-]
-"""A list of aliases that people can be called by.
-
-The actual name comparison is case- and whitespace-insensitive. I.e., 'Matt ', 'mAtt', and ' MATT ' are treated as the
-same name.
-"""
-
-
-def convert_alias_to_name(all_names: Set[str], name: str, all_aliases: Optional[List[Set[str]]] = None) -> str:
-    """Given a set of all player names, check if the name is an alias and, if so, convert to the name in the set.
-
-    This ensures that we refer to someone by only one name throughout the assignment, excluding nicknames.
-    """
-    # Mapping from the name we do comparison with to the name we should return
-    lowercase_all_names: Dict[str, str] = {name.lower().strip(): name for name in all_names}
-
-    alias_list = {name}
-    all_aliases_list = all_aliases or NAME_ALIASES
-    for elem in all_aliases_list:
-        if name in elem:
-            alias_list = elem
-            break
-
-    for alias in alias_list:
-        # make sure the comparison is whitespace- and case-insensitive
-        alias_to_compare = alias.lower().strip()
-        if alias_to_compare in lowercase_all_names:
-            return lowercase_all_names[alias_to_compare]
-    return name
+from src.data_types.player_pool import PlayerPool
+from src.data_types.team import TeamComposition
 
 
 def _try_to_float(value: str, default_value: int = 1) -> float:
@@ -50,7 +15,7 @@ def _try_to_float(value: str, default_value: int = 1) -> float:
         return default_value
 
 
-def load_data(csv_path: str) -> Dict[str, Player]:
+def load_data(csv_path: str) -> PlayerPool:
     column_name_to_role = {
         "queen rank": PlayerRole.QUEEN,
         "flex rank": PlayerRole.FLEX,
@@ -58,9 +23,7 @@ def load_data(csv_path: str) -> Dict[str, Player]:
         "objective rank": PlayerRole.OBJECTIVE,
     }
 
-    all_names = []
-
-    to_return = {}
+    all_players = []
     with open(csv_path, newline="") as csvfile:
         reader = csv.DictReader(csvfile)
         for row in reader:
@@ -72,20 +35,20 @@ def load_data(csv_path: str) -> Dict[str, Player]:
             float_ranking_dict = {key: _try_to_float(value) for key, value in ranking_dict.items()}
 
             name = row["name"].strip()
-            to_return[name.lower()] = Player(
+
+            player = Player(
                 name=name,
                 primary_role=primary_role,
                 ranking=float_ranking_dict,
             )
-            all_names.append(name)
+            all_players.append(player)
 
-    if len(all_names) != len(to_return):
-        raise ValueError(f"Got a duplicate player somewhere. Had {len(to_return)} players but {len(all_names)}")
-    return to_return
+    return PlayerPool(all_players)
 
 
-def load_attendance(csv_path: str, player_info: Dict[str, Player]) -> Set[Player]:
-    players = set()
+def load_attendance(csv_path: str, player_pool: PlayerPool) -> PlayerPool:
+    """Given a csv, and all possible players with ranking data, return the players who are in attendance."""
+    player_list = []
 
     with open(csv_path, newline="") as csvfile:
         reader = csv.reader(csvfile)
@@ -97,16 +60,10 @@ def load_attendance(csv_path: str, player_info: Dict[str, Player]) -> Set[Player
             is_obj = row[2]
 
             # Get all players, checking if any of the nicknames have ranking data associated
-            player_name = convert_alias_to_name(set(player_info.keys()), name)
-            current_player = player_info.get(player_name, None)
-            if current_player is None:
-                raise ValueError(
-                    f"Could not find ranking data for player with name: '{name}', possible aliases: {NAME_ALIASES}, "
-                    f"all possible players: {list(player_info.keys())}"
-                )
+            current_player = player_pool.get_player(name)
             # Set the role according to our hand selection
             if is_queen == "1" and is_obj == "1":
-                raise ValueError(f"Player {player_name} cannot be both queen and obj, pick one")
+                raise ValueError(f"Player {current_player.name} cannot be both queen and obj, pick one")
             elif is_queen == "1":
                 current_player.primary_role = PlayerRole.QUEEN
             elif is_obj == "1":
@@ -118,25 +75,25 @@ def load_attendance(csv_path: str, player_info: Dict[str, Player]) -> Set[Player
                 )
                 current_player.primary_role = PlayerRole.FLEX
 
-            players.add(current_player)
-    return players
+            player_list.append(current_player)
+    return PlayerPool(player_list)
 
 
-def load_exclusion_set(csv_path: str, all_names: Set[str]) -> List[Set[str]]:
+def load_exclusion_set(csv_path: str, player_pool: PlayerPool) -> list[PlayerPool]:
     """Given a csv, load sets of people who should not play on the same team."""
     exclusion_set = []
     with open(csv_path, newline="") as csvfile:
         reader = csv.reader(csvfile)
         next(reader)  # skip the header
         for row in reader:
-            name1 = convert_alias_to_name(all_names, row[0])
-            name2 = convert_alias_to_name(all_names, row[1])
-            exclusion_set.append({name1, name2})
+            player1 = player_pool.get_player(row[0])
+            player2 = player_pool.get_player(row[1])
+            exclusion_set.append(PlayerPool([player1, player2]))
 
     return exclusion_set
 
 
-def load_inclusion_set(csv_path: str, player_info: Dict[str, Player]) -> List[List[PlayerAssignment]]:
+def load_inclusion_set(csv_path: str, player_pool: PlayerPool) -> List[List[PlayerAssignment]]:
     inclusion_set = []
 
     role_to_csv_title = {
@@ -158,18 +115,14 @@ def load_inclusion_set(csv_path: str, player_info: Dict[str, Player]) -> List[Li
                     name = row[ind]
                     if not name:
                         continue
-                    player = player_info[convert_alias_to_name(set(player_info.keys()), name)]
+                    player = player_pool.get_player(name)
                     if role != player.primary_role:
                         print(
-                            f"Player {player.name} had primary role {player.primary_role.name} but because of inclusion set, role is now: {role.name}"
+                            f"Player {player.name} had primary role {player.primary_role.name} but because of "
+                            f"inclusion set, role is now: {role.name}"
                         )
                     team.append(PlayerAssignment(player, assigned_role=role))
             if team:
-                # TeamComposition.validate_team(team)
+                TeamComposition.validate_team(team, allow_missing=True)
                 inclusion_set.append(team)
     return inclusion_set
-
-
-if __name__ == "__main__":
-    players = load_data("data/test_data.csv")
-    print(load_inclusion_set("data/inclusion_set.csv", players))
