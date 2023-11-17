@@ -99,6 +99,42 @@ def test_exclusion_set() -> None:
     assert "E" in team_player_names and "F" in team_player_names
 
 
+def test_exclusion_set_queen_only() -> None:
+    all_players = [
+        # Team 1
+        _player_one_role("A", PlayerRole.QUEEN, 5),
+        _player_one_role("B", PlayerRole.SPEED, 5),
+        _player_one_role("C", PlayerRole.OBJECTIVE, 5),
+        _player_one_role("D", PlayerRole.FLEX, 5),
+        # Team 2
+        _player_one_role("E", PlayerRole.QUEEN, 4),
+        _player_one_role("F", PlayerRole.SPEED, 4),
+        _player_one_role("G", PlayerRole.FLEX, 5),
+        _player_one_role("H", PlayerRole.OBJECTIVE, 5),
+    ]
+    # NOTE: null case is missing because original non-exclusion UT covers it
+
+    # A and F should play together as A doesn't want F to queen, but F doesn't care
+    teams = assign_players_to_teams(PlayerPool(all_players), [], [Exclusion(all_players[0], all_players[5], True)])
+    assert len(teams) == 2
+    # Sort by team name (queen name)
+    teams.sort(key=lambda team: team.team_name)
+    team_player_names = _team_to_player_names(teams[0])
+    assert "A" in team_player_names and "F" in team_player_names
+    team_player_names = _team_to_player_names(teams[1])
+    assert "E" in team_player_names and "B" in team_player_names
+
+    # F doesn't want A to queen
+    teams = assign_players_to_teams(PlayerPool(all_players), [], [Exclusion(all_players[5], all_players[0], False)])
+    assert len(teams) == 2
+    # Sort by team name (queen name)
+    teams.sort(key=lambda team: team.team_name)
+    team_player_names = _team_to_player_names(teams[0])
+    assert "A" in team_player_names and "B" in team_player_names
+    team_player_names = _team_to_player_names(teams[1])
+    assert "E" in team_player_names and "F" in team_player_names
+
+
 def test_allows_flex_fills() -> None:
     # In a sad day, we only have 6 people (2 queen, 2 speed, 2 obj), but theoretically we should still allow any
     # flex position to fill it.

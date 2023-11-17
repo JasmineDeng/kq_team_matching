@@ -167,8 +167,16 @@ def _contains_exclusion_set(players: PlayerPool, exclusion_set: list[Exclusion])
     """Check if the set of players violates an exclusion set."""
     for exclusion in exclusion_set:
         if players.contains_pool(exclusion.player_pool):
-            # TODO: Add a queen check here
-            return exclusion.player_pool
+            if exclusion.only_if_they_queen:
+                # We need to confirm that the second player wants to queen.  That means they must be the first queen
+                # found in the existing player_pool as well
+                queen_pool = PlayerPool.filter(players, [PlayerRole.QUEEN])
+                other_name = exclusion.other_player.name
+                if (queen_pool.contains_player(other_name) and
+                        queen_pool.get_player(other_name) == queen_pool.players[0]):
+                    return exclusion.player_pool
+            else:
+                return exclusion.player_pool
     return None
 
 
