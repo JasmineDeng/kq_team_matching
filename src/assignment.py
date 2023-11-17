@@ -4,6 +4,7 @@ import os
 import random
 from typing import Callable, Dict, List, NamedTuple, Optional, Set, Tuple
 
+from src.data_types.exclusion import Exclusion
 from src.data_types.player import BasePlayerAssignment, Player, PlayerAssignment, PlayerRole
 from src.data_types.player_pool import PlayerPool
 from src.data_types.team import Team, TeamComposition, roles_to_average_score
@@ -169,15 +170,20 @@ def _contains_exclusion_set(players: PlayerPool, exclusion_set: list[PlayerPool]
             return exclusion
     return None
 
+# TODO(chris): Replace the original method with this new one (and make new one handle the queen case)
+def _contains_exclusion_set2(players: PlayerPool, exclusion_set: list[Exclusion]) -> Optional[PlayerPool]:
+    """Check if the set of players violates an exclusion set."""
+    return _contains_exclusion_set(players, [e.player_pool for e in exclusion_set])
+
 
 def _get_match_exclusion_set_players(
-    all_players: PlayerPool, group: _PlayerGroup, exclusion_set: list[PlayerPool]
+    all_players: PlayerPool, group: _PlayerGroup, exclusion_set: list[Exclusion]
 ) -> Set[str]:
     """Given a list of all players and a group of players, return all players who CANNOT be put on the team."""
     to_exclude: Set[str] = set()
     for player in all_players.players:
         possible_team = PlayerPool([p.player for p in group.players] + [player])
-        if _contains_exclusion_set(possible_team, exclusion_set) is not None:
+        if _contains_exclusion_set2(possible_team, exclusion_set) is not None:
             to_exclude.add(player.name)
     return to_exclude
 
@@ -246,7 +252,7 @@ def _assign_players_with_exclusion_set(
     groups_to_skip: List[_PlayerGroup],
     possible_players: PlayerPool,
     role: PlayerRole,
-    exclusion_set: list[PlayerPool],
+    exclusion_set: list[Exclusion],
     role_averages: Dict[PlayerRole, float],
     use_uniform_sampling: bool,
 ) -> List[PlayerAssignment]:
@@ -343,7 +349,7 @@ def _assign_players_with_exclusion_set(
 def assign_players_to_teams(
     player_pool: PlayerPool,
     inclusion_set: List[List[PlayerAssignment]],
-    exclusion_set: list[PlayerPool],
+    exclusion_set: list[Exclusion],
     use_uniform_sampling: bool = False,
 ) -> List[Team]:
     # Find the minimum number of teams required.
@@ -353,7 +359,7 @@ def assign_players_to_teams(
     role_averages = roles_to_average_score(player_pool.players)
     # Remove the people in the inclusion set from the overall set, and also check it does not violate the exclusion set.
     for inclusion in inclusion_set:
-        excluded = _contains_exclusion_set(PlayerPool([p.player for p in inclusion]), exclusion_set)
+        excluded = _contains_exclusion_set2(PlayerPool([p.player for p in inclusion]), exclusion_set)
         if excluded is not None:
             raise ValueError(f"Can't assign teams when inclusion set: {inclusion} violates exclusion set: {excluded}")
         player_pool = PlayerPool.remove_subset_from(player_pool, [p.player for p in inclusion])

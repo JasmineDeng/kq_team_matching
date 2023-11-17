@@ -3,6 +3,7 @@ from typing import Set
 import pytest
 
 from src.assignment import _contains_exclusion_set, assign_players_to_teams
+from src.data_types.exclusion import Exclusion
 from src.data_types.player import Player, PlayerAssignment, PlayerRole
 from src.data_types.player_pool import PlayerPool
 from src.data_types.team import Team
@@ -78,8 +79,7 @@ def test_exclusion_set() -> None:
     team_player_names = _team_to_player_names(teams[1])
     assert "E" in team_player_names and "B" in team_player_names
 
-    exclusion_set = [p for p in all_players if p.name in ["A", "F"]]
-    teams = assign_players_to_teams(PlayerPool(all_players), [], [PlayerPool(exclusion_set)])
+    teams = assign_players_to_teams(PlayerPool(all_players), [], [Exclusion(all_players[0], all_players[5], False)])
     assert len(teams) == 2
     # Sort by team name (queen name)
     teams.sort(key=lambda team: team.team_name)
