@@ -163,17 +163,13 @@ def _players_to_assignment(players: List[Player], role: PlayerRole) -> List[Play
     return [PlayerAssignment(player=p, assigned_role=role) for p in players]
 
 
-def _contains_exclusion_set(players: PlayerPool, exclusion_set: list[PlayerPool]) -> Optional[PlayerPool]:
+def _contains_exclusion_set(players: PlayerPool, exclusion_set: list[Exclusion]) -> Optional[PlayerPool]:
     """Check if the set of players violates an exclusion set."""
     for exclusion in exclusion_set:
-        if players.contains_pool(exclusion):
-            return exclusion
+        if players.contains_pool(exclusion.player_pool):
+            # TODO: Add a queen check here
+            return exclusion.player_pool
     return None
-
-# TODO(chris): Replace the original method with this new one (and make new one handle the queen case)
-def _contains_exclusion_set2(players: PlayerPool, exclusion_set: list[Exclusion]) -> Optional[PlayerPool]:
-    """Check if the set of players violates an exclusion set."""
-    return _contains_exclusion_set(players, [e.player_pool for e in exclusion_set])
 
 
 def _get_match_exclusion_set_players(
@@ -183,7 +179,7 @@ def _get_match_exclusion_set_players(
     to_exclude: Set[str] = set()
     for player in all_players.players:
         possible_team = PlayerPool([p.player for p in group.players] + [player])
-        if _contains_exclusion_set2(possible_team, exclusion_set) is not None:
+        if _contains_exclusion_set(possible_team, exclusion_set) is not None:
             to_exclude.add(player.name)
     return to_exclude
 
@@ -359,7 +355,7 @@ def assign_players_to_teams(
     role_averages = roles_to_average_score(player_pool.players)
     # Remove the people in the inclusion set from the overall set, and also check it does not violate the exclusion set.
     for inclusion in inclusion_set:
-        excluded = _contains_exclusion_set2(PlayerPool([p.player for p in inclusion]), exclusion_set)
+        excluded = _contains_exclusion_set(PlayerPool([p.player for p in inclusion]), exclusion_set)
         if excluded is not None:
             raise ValueError(f"Can't assign teams when inclusion set: {inclusion} violates exclusion set: {excluded}")
         player_pool = PlayerPool.remove_subset_from(player_pool, [p.player for p in inclusion])

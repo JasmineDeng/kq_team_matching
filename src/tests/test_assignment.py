@@ -23,6 +23,16 @@ def _name_list_to_players(names: list[list[str]], all_players: list[Player]) -> 
     return [PlayerPool([p for p in all_players if p.name in name_list]) for name_list in names]
 
 
+def _name_list_to_exclusions(names: list[list[str]], all_players: list[Player]) -> list[Exclusion]:
+    result = []
+
+    for name_list in names:
+        players = [p for p in all_players if p.name in name_list]
+        result.append(Exclusion(players[0], players[1], False))
+
+    return result
+
+
 def test_contains_exclusion_set() -> None:
     players = [
         _player_one_role("A", PlayerRole.QUEEN, 5),
@@ -32,12 +42,12 @@ def test_contains_exclusion_set() -> None:
     all_players = players + [_player_one_role("D", PlayerRole.FLEX, 5)]
     player_pool = PlayerPool(players)
 
-    exclusion_players = _contains_exclusion_set(player_pool, _name_list_to_players([["A", "B"]], all_players))
+    exclusion_players = _contains_exclusion_set(player_pool, _name_list_to_exclusions([["A", "B"]], all_players))
     assert exclusion_players is not None
     assert {p.name for p in exclusion_players.players} == {"A", "B"}
-    assert _contains_exclusion_set(player_pool, _name_list_to_players([["C", "D"]], all_players)) is None
+    assert _contains_exclusion_set(player_pool, _name_list_to_exclusions([["C", "D"]], all_players)) is None
     exclusion_players = _contains_exclusion_set(
-        player_pool, _name_list_to_players([["A", "B"], ["A", "C"]], all_players)
+        player_pool, _name_list_to_exclusions([["A", "B"], ["A", "C"]], all_players)
     )
     assert exclusion_players is not None
     assert {p.name for p in exclusion_players.players} == {"A", "B"}
