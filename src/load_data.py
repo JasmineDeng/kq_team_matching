@@ -1,9 +1,11 @@
 import csv
 from typing import List
 
+from src.data_types.exclusion import Exclusion
 from src.data_types.player import Player, PlayerAssignment, PlayerRole
 from src.data_types.player_pool import PlayerPool
 from src.data_types.team import TeamComposition
+from datetime import datetime
 
 
 def _try_to_float(value: str, default_value: int = 1) -> float:
@@ -79,16 +81,24 @@ def load_attendance(csv_path: str, player_pool: PlayerPool) -> PlayerPool:
     return PlayerPool(player_list)
 
 
-def load_exclusion_set(csv_path: str, player_pool: PlayerPool) -> list[PlayerPool]:
+def load_exclusion_set(csv_path: str, player_pool: PlayerPool) -> list[Exclusion]:
     """Given a csv, load sets of people who should not play on the same team."""
     exclusion_set = []
     with open(csv_path, newline="") as csvfile:
         reader = csv.reader(csvfile)
         next(reader)  # skip the header
         for row in reader:
-            player1 = player_pool.get_player(row[0])
-            player2 = player_pool.get_player(row[1])
-            exclusion_set.append(PlayerPool([player1, player2]))
+            if len(row) > 3 and datetime.strptime(row[3], "%Y-%m-%d") >= datetime.now():
+                continue
+
+            requestor = player_pool.get_player(row[0])
+            other_player = player_pool.get_player(row[1])
+
+            only_if_they_queen = False
+            if len(row) > 2:
+                only_if_they_queen = bool(row[2])
+
+            exclusion_set.append(Exclusion(requestor, other_player, only_if_they_queen))
 
     return exclusion_set
 
