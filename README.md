@@ -11,3 +11,13 @@ To do a player assignment, after setting up and entering the virtualenv, enter t
 ```commandline
 python main.py assign -f data/test_data.csv
 ```
+
+If you want to recompute a preexisting assignment, you can run:
+```commandline
+python main.py recompute -r data/test_data.csv
+```
+This by default recomputes the most recently computed assignment (which is determined
+by the timestamp in the filename under `data/league_night`). Note that when editing a preexisting
+team assignment, the blank lines ",,,," denoting Phils are important and should not be deleted
+in the process of swapping players around. It ialso important to preserve team composition, i.e.,
+a team must always have a Queen, an Objective, and a Speed player.
