@@ -1,11 +1,11 @@
 import csv
+from datetime import datetime
 from typing import List
 
 from src.data_types.exclusion import Exclusion
 from src.data_types.player import Player, PlayerAssignment, PlayerRole
 from src.data_types.player_pool import PlayerPool
 from src.data_types.team import TeamComposition
-from datetime import datetime
 
 
 def _try_to_float(value: str, default_value: int = 1) -> float:
@@ -88,7 +88,7 @@ def load_exclusion_set(csv_path: str, player_pool: PlayerPool) -> list[Exclusion
         reader = csv.reader(csvfile)
         next(reader)  # skip the header
         for row in reader:
-            if len(row) > 3 and datetime.strptime(row[3], "%Y-%m-%d") >= datetime.now():
+            if len(row) > 3 and row[3] and datetime.strptime(row[3], "%Y-%m-%d") >= datetime.now():
                 continue
 
             requestor = player_pool.get_player(row[0])

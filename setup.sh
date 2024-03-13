@@ -16,3 +16,4 @@ echo "$ALIAS_CMD" >> ~/.bash_profile
 echo "export PYTHONPATH=\"$PROJECT_DIRECTORY:\$PYTHONPATH\"" >> ~/.bash_profile
 
 echo 'Setup complete, run `source ~/.bash_profile` use `kq_env` to enter the dev environment in the future!'
+echo 'If your shell does not source .bash_profile, copy the command to the relevant file.'
