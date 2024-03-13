@@ -1,22 +1,20 @@
-Player 1,Player 2
-Scott,Dan
-Scott,Chaz
-Scott,Keoni
-Sam,Dan
-Sam,Chaz
-Reed,Dan
-Brian M,Chaz
-Elyse,Jeff
-Abby,Dan
-Chaz,Felix
-Dan,Chaz
-Charles,Chaz
-Drew,Chaz
-Brad,Dan, (Josh)
-Eva,Dan, (Josh)
-Turese,Dan, (Josh)
-Turese,Keoni, (Josh)
-Darell,Dan, (Josh)
-James,Dan, (josh)
-AndrewR,Dan, (Josh)
-Brian M,Dan,
+Requester,Other Player,Only If They Queen,Expiration YY-MM-DD,Requester
+Scott,Dan,true
+Scott,Chaz,true
+Scott,Keoni,false
+Sam,Dan,true
+Sam,Chaz,true
+Reed,Dan,true
+Brian M,Chaz,true
+Elyse,Jeff,false
+Abby,Dan,true
+Chaz,Felix,false
+Dan,Chaz,false
+Charles,Chaz,true
+Drew,Chaz,true
+Brad,Dan,true,, (Josh)
+Eva,Dan,true,, (Josh)
+Turese,Dan,true,, (Josh)
+Turese,Keoni,false,, (Josh)
+AndrewR,Dan,true,, (Josh)
+Brian M,Dan,false,,

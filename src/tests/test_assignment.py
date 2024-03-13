@@ -3,6 +3,7 @@ from typing import Set
 import pytest
 
 from src.assignment import _contains_exclusion_set, assign_players_to_teams
+from src.data_types.exclusion import Exclusion
 from src.data_types.player import Player, PlayerAssignment, PlayerRole
 from src.data_types.player_pool import PlayerPool
 from src.data_types.team import Team
@@ -22,6 +23,16 @@ def _name_list_to_players(names: list[list[str]], all_players: list[Player]) -> 
     return [PlayerPool([p for p in all_players if p.name in name_list]) for name_list in names]
 
 
+def _name_list_to_exclusions(names: list[list[str]], all_players: list[Player]) -> list[Exclusion]:
+    result = []
+
+    for name_list in names:
+        players = [p for p in all_players if p.name in name_list]
+        result.append(Exclusion(players[0], players[1], False))
+
+    return result
+
+
 def test_contains_exclusion_set() -> None:
     players = [
         _player_one_role("A", PlayerRole.QUEEN, 5),
@@ -31,12 +42,12 @@ def test_contains_exclusion_set() -> None:
     all_players = players + [_player_one_role("D", PlayerRole.FLEX, 5)]
     player_pool = PlayerPool(players)
 
-    exclusion_players = _contains_exclusion_set(player_pool, _name_list_to_players([["A", "B"]], all_players))
+    exclusion_players = _contains_exclusion_set(player_pool, _name_list_to_exclusions([["A", "B"]], all_players))
     assert exclusion_players is not None
     assert {p.name for p in exclusion_players.players} == {"A", "B"}
-    assert _contains_exclusion_set(player_pool, _name_list_to_players([["C", "D"]], all_players)) is None
+    assert _contains_exclusion_set(player_pool, _name_list_to_exclusions([["C", "D"]], all_players)) is None
     exclusion_players = _contains_exclusion_set(
-        player_pool, _name_list_to_players([["A", "B"], ["A", "C"]], all_players)
+        player_pool, _name_list_to_exclusions([["A", "B"], ["A", "C"]], all_players)
     )
     assert exclusion_players is not None
     assert {p.name for p in exclusion_players.players} == {"A", "B"}
@@ -78,8 +89,43 @@ def test_exclusion_set() -> None:
     team_player_names = _team_to_player_names(teams[1])
     assert "E" in team_player_names and "B" in team_player_names
 
-    exclusion_set = [p for p in all_players if p.name in ["A", "F"]]
-    teams = assign_players_to_teams(PlayerPool(all_players), [], [PlayerPool(exclusion_set)])
+    teams = assign_players_to_teams(PlayerPool(all_players), [], [Exclusion(all_players[0], all_players[5], False)])
+    assert len(teams) == 2
+    # Sort by team name (queen name)
+    teams.sort(key=lambda team: team.team_name)
+    team_player_names = _team_to_player_names(teams[0])
+    assert "A" in team_player_names and "B" in team_player_names
+    team_player_names = _team_to_player_names(teams[1])
+    assert "E" in team_player_names and "F" in team_player_names
+
+
+def test_exclusion_set_queen_only() -> None:
+    all_players = [
+        # Team 1
+        _player_one_role("A", PlayerRole.QUEEN, 5),
+        _player_one_role("B", PlayerRole.SPEED, 5),
+        _player_one_role("C", PlayerRole.OBJECTIVE, 5),
+        _player_one_role("D", PlayerRole.FLEX, 5),
+        # Team 2
+        _player_one_role("E", PlayerRole.QUEEN, 4),
+        _player_one_role("F", PlayerRole.SPEED, 4),
+        _player_one_role("G", PlayerRole.FLEX, 5),
+        _player_one_role("H", PlayerRole.OBJECTIVE, 5),
+    ]
+    # NOTE: null case is missing because original non-exclusion UT covers it
+
+    # A and F should play together as A doesn't want F to queen, but F doesn't care
+    teams = assign_players_to_teams(PlayerPool(all_players), [], [Exclusion(all_players[0], all_players[5], True)])
+    assert len(teams) == 2
+    # Sort by team name (queen name)
+    teams.sort(key=lambda team: team.team_name)
+    team_player_names = _team_to_player_names(teams[0])
+    assert "A" in team_player_names and "F" in team_player_names
+    team_player_names = _team_to_player_names(teams[1])
+    assert "E" in team_player_names and "B" in team_player_names
+
+    # F doesn't want A to queen
+    teams = assign_players_to_teams(PlayerPool(all_players), [], [Exclusion(all_players[5], all_players[0], False)])
     assert len(teams) == 2
     # Sort by team name (queen name)
     teams.sort(key=lambda team: team.team_name)
