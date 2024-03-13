@@ -14,6 +14,11 @@ environment variable contains `/path/to/kq_team_maching`.
 Note the script assumes you are running on a Macbook and have Python3.11 installed.
 If you do not have Python3.11, visit https://www.python.org/downloads/macos/ to download the latest release.
 
+If you want to do any development in the repository, we have some precommit hooks! Install those by using
+```commandline
+pre-commit install
+```
+
 ## Assigning teams
 
 To do a player assignment, after setting up and entering the virtualenv, enter the `kq_team_matching/src` directory and run:
@@ -28,5 +33,5 @@ python main.py recompute -r data/test_data.csv
 This by default recomputes the most recently computed assignment (which is determined
 by the timestamp in the filename under `data/league_night`). Note that when editing a preexisting
 team assignment, the blank lines ",,,," denoting Phils are important and should not be deleted
-in the process of swapping players around. It ialso important to preserve team composition, i.e.,
+in the process of swapping players around. It is also important to preserve team composition, i.e.,
 a team must always have a Queen, an Objective, and a Speed player.

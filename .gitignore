@@ -4,4 +4,4 @@ __pycache__
 .idea
 .DS_Store
 *.iml
-src/data/test_data.csv
+src/data/
