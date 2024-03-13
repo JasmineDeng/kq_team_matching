@@ -1,18 +1,20 @@
-Requester,Other Player,Only If They Queen,Expiration YY-MM-DD
-Jasmine,Dan,false
-Scott,Dan,false
-Scott,Chaz,false
+Requester,Other Player,Only If They Queen,Expiration YY-MM-DD,Requester
+Scott,Dan,true
+Scott,Chaz,true
 Scott,Keoni,false
-Scott,Abby,false
-Steve,Drew,false
-Sam,Dan,false
-Sam,Chaz,false
-Reed,Dan,false
-Brian M,Chaz,false
+Sam,Dan,true
+Sam,Chaz,true
+Reed,Dan,true
+Brian M,Chaz,true
 Elyse,Jeff,false
-Keoni,Dan,false
-Abby,Dan,false
+Abby,Dan,true
 Chaz,Felix,false
 Dan,Chaz,false
-Chris,Dan,true,2024-01-01
-Chris,Chaz,true,2024-01-01
+Charles,Chaz,true
+Drew,Chaz,true
+Brad,Dan,true,, (Josh)
+Eva,Dan,true,, (Josh)
+Turese,Dan,true,, (Josh)
+Turese,Keoni,false,, (Josh)
+AndrewR,Dan,true,, (Josh)
+Brian M,Dan,false,,

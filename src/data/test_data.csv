@@ -1,97 +1,121 @@
-,name,Primary Role,Secondary Role,,queen rank,flex rank,speed rank,objective rank
-,Chaz,Queen,flex,,7,5,5,5
-,Brad,flex,Objective,,1,3,3,3
-,Ryan,queen,flex,,6,8,8,7
-,Dan,queen,flex,,7,6,6,6
-,Blee,speed,flex,,7,8,8,8
-,Josh,speed,queen,,9,9,9,8
-,David,objective,flex,,1,3,2,4
-,Dray,speed,flex,,7,8.5,8.5,7
-,Felix,speed,flex,,4,7,7,7
-,Coki,speed,flex,,1,3.5,4,5
-,Brian M,speed,flex,,4,7,7,9
-,Jess,speed,flex,,6.9,7,6,7
-,Blue Chris,speed,queen,,6,8,8,8
-,Sam,flex,flex,,4,7,6,9
-,Charles,flex,objective,,2,4,4,5
-,Jasmine,objective,flex,,2,4,4,8
-,Matt,speed,flex,,7,9,9,9
-,Turese,objective,flex,,1,3.5,3,6
-,Steve,speed,flex,,4,9,8,7
-,Drew,speed,speed,,6,6,6,6
-,Keoni,flex,speed,,1,4,4,4
-,Mo,flex,objective,,2,3,3,5
-,Scott,speed,flex,,3,7,7,7
-,Reed,flex,speed,,3,5,5,5
-,Bryce,flex,objective,,4,4,4,3
-,Dylan,flex,objective,,1,2,2,2
-,DerekM,flex,objective,,1,2,1,2
-,Yash,flex,objective,,1,2,1,2
-,Rebecca,flex,objective,,1,3,3,5
-,Mitch,speed,objective,,6,6,6,5
-,Aaron,flex,objective,,1,2,2.5,2.5
-,ChrisK,speed,flex,,6,8,8,7
-,Jonathan,objective,flex,,2,3,3,3
-,Andrew,flex,objective,,1,2,2,2
-,Ryan Vile,speed,objective,,1,5,5,6
-,Kelly,flex,objective,,1,1,1,3
-,Mikio,speed,objective,,3,5,5,5
-,Mysto,flex,objective,,1,1,1,1
-,Gino,speed,speed,,5,7,7,7
-,Lisa,flex,objective,,1,1,1,1
-,Martin,flex,objective,,1,1,1,1
-,Ernesto,flex,objective,,1,1,1,1
-,Flo,flex,objective,,1,1,1,1
-,Casey,flex,objective,,1,1,1,1
-,Andrew L,flex,objective,,1,2,2,2
-,Nick,flex,objective,,1,1,1,1
-,Mike,flex,objective,,3,4,4,4
-,Bri,objective,flex,,1,1,1,3
-,Jeremy,objective,flex,,1,1,1,1
-,James,objective,flex,,1,1,1,1
-,Heather,flex,speed,,2,5,5,6
-,Walshy,queen,flex,,9,9,9,8
-,Miranda,flex,objective,,5,6,6,8
-,Jeff,flex,objective,,4,5,5,7
-,Soren,speed,flex,,5,8.5,8.5,8
-,McKenna,flex,objective,,3,4,4,4
-,Rachel,flex,objective,,2,4,4,6
-,Abby,queen,flex,,3.5,5,5,5
-,Kendra,flex,objective,,2,3,3,4
-,Toshi,speed,flex,,7,6,6,5
-,Ian,speed,flex,,4,7,7,6
-,Quinn,speed,flex,,5,5,5,6
-,Elyse,speed,flex,,6,8,8,8
-,Rob,queen,objective,,9,7,7,10
-,Eva,flex,objective,,1,1,1,1
-,Parker,flex,objective,,1,2,2,2
-,Shekt,flex,objective,,1,1,1,1
-,Nate,flex,objective,,1,1,1,1
-,Curt,flex,objective,,1,1,1,1
-,Joey,flex,objective,,1,2,2,3
-,Dylan Lee,queen,speed,,9,6.5,6.5,8
-,Ryan N,flex,objective,,2,2,2,2
-,Malav,objective,flex,,1,2,2,3
-,Joyce,queen,flex,,3,5,5,5
-,Dan Phl,flex,flex,,2,4,4,4
-,Dee,speed,flex,,5,6.8,6.8,6.8
-,SamB,queen,speed,,9,7,7,7
-,Ben,queen,flex,,5.5,5,5,4
-,Mat,flex,objective,,4,4,4,4
-,Alex,flex,objective,,1,3,2,3
-,Mark,flex,objective,,4,4,3,8
-,Wyatt,speed,flex,,5,9,8,7
-,Richard,speed,flex,,4,6,6,8
-,Craig,speed,queen,,7,6,7,8
-,Hell,flex,speed,,5,9,8,8
-,Jessie,flex,objective,,2,2,2,4
-,Microwave,flex,objective,,2,4,4,4
-,Coppola,speed,flex,,5,6,6,6
-,NickyD,speed,flex,,6.5,9,9,9
-,Sean,flex,objective,,5,5,5,5
-,Chris R,flex,objective,,1,2,2,2
-,MarkSF,flex,objective,,1,1,1,1
-,RichardNY,flex,objective,,4,6,6,8
-,JeffSEA,speed,flex,,5,6,6,6
-,Ram,flex,objective,,4,4,4,4
-,Tim,objective,flex,,1,1,1,1
+name,Primary Role,Secondary Role,,queen rank,flex rank,speed rank,objective rank
+Bryce,speed,objective,,4,4,4,3
+Reed,speed,speed,,3,5,5,5
+Dylan,speed,objective,,1,2,2,2
+DerekM,flex,objective,,1,2,1,2
+Yash,flex,objective,,1,2,1,2
+Drew,speed,flex,,5,6,6,6
+Josh,speed,queen,,9,9,9,8
+Blee,speed,flex,,7,8,8,8
+Dray,speed,flex,,6.5,9,9,7
+Matt,speed,flex,,7,9,9,9
+Mitch,speed,objective,,5.5,7,7,7
+Jess,speed,queen,,6.5,7,6,7
+Ryan,speed,flex,,6.5,8,8,7
+Blue Chris,speed,queen,,6,8,8,8
+ChrisK,speed,flex,,6,8,8,7
+Dan,speed,flex,,6,6,6,7
+Walshy,Speed,flex,,9,9,9,8
+Rob,Speed,objective,,9,7,7,10
+Dylan Lee,Speed,speed,,9,6.5,6.5,8
+SamB,Speed,speed,,9,7,7,7
+Toshi,speed,flex,,7,6,6,5
+Craig,speed,queen,,7,6,7,8
+MasterJoe,speed,flex,,7,7,7,7
+NickyD,speed,flex,,6.5,9,9,9
+Elyse,speed,flex,,6,8,8,8
+Bueno,speed,flex,,6,6,6,6
+Ben,speed,flex,,5.5,5,5,4
+Chaz,speed,flex,,5,4,4,3
+Gino,speed,speed,,5,7,7,7
+Miranda,speed,objective,,5,6,6,8
+Soren,speed,flex,,5,8.5,8.5,8
+Quinn,speed,flex,,5,5,5,6
+Dee,speed,flex,,5,6.8,6.8,6.8
+Wyatt,speed,flex,,5,9,8,7
+Hell,speed,speed,,5,9,8,8
+Coppola,speed,flex,,5,6,6,6
+Sean Kelly,speed,objective,,4,4,4,4
+JeffSEA,speed,flex,,5,6,6,6
+Felix,speed,flex,,4,7,7,6
+Brian M,speed,objective,,4,6,5,9
+Sam,speed,flex,,4,7,6,9
+Steve,speed,flex,,4,9,8,7
+Jeff,flex,objective,,4,5,5,7
+Ian,speed,flex,,4,7,7,6
+Mat,flex,objective,,4,4,4,4
+Mark,flex,objective,,4,4,3,8
+Richard,speed,flex,,4,6,6,8
+RichardNY,flex,objective,,4,6,6,8
+Ram,flex,objective,,4,4,4,4
+Abby,speed,flex,,3.5,5,5,5
+Scott,speed,flex,,3,7.5,7.5,7.5
+Mikio,speed,objective,,3,5,5,5
+Mike,flex,objective,,3,4,4,4
+McKenna,flex,objective,,3,4,4,4
+Joyce,speed,flex,,3,5,5,5
+Charles,flex,objective,,2,5,5,6
+Jasmine,objective,flex,,2,4,4,8.5
+Mo,flex,objective,,2,4,4,5
+Heather,speed,speed,,2,5,5,6
+Rachel,speed,objective,,2,4,4,6
+Kendra,flex,objective,,2,2,2,3
+Ryan N,flex,objective,,2,2,2,2
+Dan Phl,flex,flex,,2,4,4,4
+Jessie,flex,objective,,2,2,2,4
+Microwave,flex,objective,,2,4,4,4
+Morgan,objective,flex,,2,2,2,2
+Brad,flex,Objective,,1,3,3,3
+David,objective,flex,,1,2,2,5
+Coki,flex,flex,,1,4,4,5
+Turese,flex,flex,,1,3.5,3,6
+Keoni,flex,speed,,1,4,3,4
+Rebecca,flex,objective,,1,3,3,4
+Aaron,flex,objective,,1,2,3,2
+Jonathan,objective,flex,,1,2,2,2
+Andrew,flex,objective,,1,2,2,2
+Ryan Vile,flex,objective,,1,4,4,4
+Kelly,flex,objective,,1,1,1,3
+Mysto,flex,objective,,1,1,1,1
+Lisa,flex,objective,,1,1,1,1
+Martin,flex,objective,,1,1,1,1
+Ernesto,flex,objective,,1,1,1,1
+Flo,flex,objective,,1,1,1,1
+Casey,flex,objective,,1,1,1,1
+Andrew L,flex,objective,,1,2,2,2
+Nick,flex,objective,,1,1,1,1
+Bri,objective,flex,,1,1,1,3
+Jeremy,objective,flex,,1,1,1,1
+James,objective,flex,,1,1,1,1
+Eva,flex,objective,,1,1,1,4
+Parker,flex,objective,,1,1,1,2
+Shekt,flex,objective,,1,1,1,1
+Nate,flex,objective,,1,1,1,1
+Curt,flex,objective,,1,1,1,1
+Joey,flex,objective,,1,2,2,3
+Malav,objective,flex,,1,2,2,3
+Alex,flex,objective,,2.5,3,3,3
+Chris R,flex,objective,,1,2,2,4
+MarkSF,flex,objective,,1,1,1,1
+Tim,objective,flex,,1,1,1,1
+Ethan,objective,flex,,1,1,1,1
+Chexx,objective,flex,,1,1,1,3
+Cooper,objective,flex,,1,1,1,1
+Grey Chris,objective,flex,,1,1,1,1
+Mando,objective,flex,,1,1,1,1
+Talyn,objective,flex,,1,1.5,1.5,1.5
+Noah,objective,flex,,1,1,1,1
+AndrewR,objective,flex,,1,1,1,1
+Darell,objective,flex,,1,1,1,1
+Walter,objective,flex,,1,1,1,1
+Chan,objective,flex,,1,1,1,1
+Kevin,objective,flex,,3,3,3,3
+Thomas,objective,flex,,1,1,1,1
+Jaime,objective,flex,,1,1,1,1
+Austin,objective,flex,,1,1,1,1
+Chris B,objective,flex,2,3,4,4
+Samira,objective,flex,1,1,1,1
+Jarobi,objective,flex,1,1,1,1
+Ryan A,flex,objective,3,3,3,3
+Asher,flex,objective,3,3,3,4
+Monica,objective,flex,1,2,2,2
