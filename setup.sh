@@ -12,8 +12,17 @@ source kq_env/bin/activate
 pip install -r requirements/requirements.txt
 
 ALIAS_CMD="alias kq_env='cd $PROJECT_DIRECTORY && source kq_env/bin/activate'"
-echo "$ALIAS_CMD" >> ~/.bash_profile
-echo "export PYTHONPATH=\"$PROJECT_DIRECTORY:\$PYTHONPATH\"" >> ~/.bash_profile
 
-echo 'Setup complete, run `source ~/.bash_profile` use `kq_env` to enter the dev environment in the future!'
-echo 'If your shell does not source .bash_profile, copy the command to the relevant file.'
+if [[ -z $ZSH_VERSION ]]; then
+  echo "Detected zsh, updating .zshrc"
+  SRC_FILE="$HOME/.zshrc"
+else
+  echo "Defaulting to bash, updating .bash_profile"
+  SRC_FILE="$HOME/.bash_profile"
+fi
+
+echo "$ALIAS_CMD" >> "$SRC_FILE"
+echo "export PYTHONPATH=\"$PROJECT_DIRECTORY:\$PYTHONPATH\"" >> "$SRC_FILE"
+
+echo "Setup complete, run 'source $SRC_FILE' use 'kq_env' to enter the dev environment in the future!"
+echo "If your shell does not source $SRC_FILE, copy the command to the relevant file."
