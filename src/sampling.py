@@ -1,7 +1,7 @@
 import enum
 import math
 import random
-from typing import List, Tuple
+from typing import List
 
 from src.data_types.player import Player, PlayerAssignment, PlayerRole
 
@@ -16,23 +16,15 @@ class PlayerSamplingStrategy(enum.Enum):
     RANDOM = 4
 
 
-def get_players_for_role(all_players: List[Player], role: PlayerRole) -> List[PlayerAssignment]:
-    # Implement the idea that speed can play flex, but other roles should remain static
-    if role == PlayerRole.FLEX:
-        return [
-            PlayerAssignment(player=p, assigned_role=role)
-            for p in all_players
-            if p.primary_role in {PlayerRole.FLEX, PlayerRole.SPEED}
-        ]
-    return [p.to_primary_role_assignment() for p in all_players if p.primary_role == role]
+def get_players_for_role(players: List[PlayerAssignment], role: PlayerRole) -> List[PlayerAssignment]:
+    return [p for p in players if p.assigned_role == role]
 
 
-def _sort_fn_role_priority(
-    assigned_player: PlayerAssignment,
-) -> Tuple[float, int, float]:
-    is_primary_role = assigned_player.assigned_role == assigned_player.player.primary_role
-    # Return a higher value for if it is their primary role
-    return assigned_player.score, int(is_primary_role), random.random()
+def _make_sort_fn_score_random_tie_break(role: PlayerRole) -> tuple:
+    def _sort_fn(player: Player) -> tuple:
+        return player.ranking[role], random.random()
+
+    return _sort_fn
 
 
 def _sample_players_by_highest_score(
@@ -46,7 +38,8 @@ def _sample_players_by_highest_score(
     all_players = get_players_for_role(players, role)
     # We must sort this reversed since we want to select the strongest players. Players with the role as their primary
     # role have [1] in the second element, so they will also be prioritized via tie break.
-    all_players.sort(key=_sort_fn_role_priority, reverse=True)
+    sort_fn = _make_sort_fn_score_random_tie_break(role)
+    all_players.sort(key=sort_fn, reverse=True)
     return all_players[:num_required]
 
 
