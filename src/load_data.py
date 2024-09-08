@@ -17,7 +17,7 @@ def _try_to_float(value: str, default_value: int = 1) -> float:
         return default_value
 
 
-def load_data(csv_path: str) -> PlayerNamePool[PlayerAssignment]:
+def load_data(csv_path: str) -> PlayerNamePool[Player]:
     column_name_to_role = {
         "queen rank": PlayerRole.QUEEN,
         "flex rank": PlayerRole.FLEX,
@@ -38,8 +38,7 @@ def load_data(csv_path: str) -> PlayerNamePool[PlayerAssignment]:
                 name=name,
                 ranking=float_ranking_dict,
             )
-            # By default, assume all players are FLEX.
-            all_players.append(player.to_assignment(PlayerRole.FLEX))
+            all_players.append(player)
 
     return PlayerNamePool(all_players)
 

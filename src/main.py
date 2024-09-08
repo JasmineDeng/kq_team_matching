@@ -9,7 +9,7 @@ from src.cli_utils import prompt_yes_no
 from src.data_types.team import TeamComposition, read_teams_from_csv, roles_to_average_score, write_teams_to_csv
 from src.find_fills import find_fills
 from src.load_data import load_attendance, load_data, load_exclusion_set, load_inclusion_set
-from src.visualization.scores import primary_role_score_histogram
+from src.visualization.scores import role_score_histogram
 
 DATETIME_FORMAT = "%Y-%m-%d_%H:%M:%S"
 
@@ -43,7 +43,7 @@ def assign(file_path: str) -> None:
     player_infos = load_data(file_path)
     player_pool = load_attendance("data/attendance.csv", player_infos)
 
-    inclusion_set = load_inclusion_set("data/inclusion_set.csv", player_pool)
+    inclusion_set = load_inclusion_set("data/inclusion_set.csv", player_infos)
     exclusion_set = load_exclusion_set("data/exclusion_set.csv", player_infos)
     print(f"Loaded exclusion set: {', '.join([str(e) for e in exclusion_set])}")
     teams = assign_players_to_teams(player_pool, inclusion_set, exclusion_set)
@@ -123,8 +123,7 @@ def recompute(ranking_file_path: str, file_path: str | None) -> None:
 )
 def vis_scores(file_path: str) -> None:
     player_infos = load_data(file_path)
-    all_players = load_attendance("data/attendance.csv", player_infos)
-    primary_role_score_histogram(all_players.players)
+    role_score_histogram(player_infos.players)
 
 
 if __name__ == "__main__":

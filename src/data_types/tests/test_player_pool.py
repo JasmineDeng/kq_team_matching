@@ -1,12 +1,12 @@
 import pytest
 
-from src.data_types.player import Player, PlayerRole
+from src.data_types.player import Player
 from src.data_types.player_pool import PlayerNamePool
 from src.data_types.tests.mock_data import get_fake_ranking
 
 
 def fake_player(name: str) -> Player:
-    return Player(name, primary_role=PlayerRole.FLEX, ranking=get_fake_ranking())
+    return Player(name, ranking=get_fake_ranking())
 
 
 def test_convert_alias_to_name() -> None:
@@ -36,9 +36,9 @@ def test_player_pool_name_get_contains() -> None:
     assert player_pool.get_player("a") == player_pool.get_player("A")
 
     # Test contains works also regardless of casing or whitespace
-    assert player_pool.contains_player("bEe")
-    assert player_pool.contains_player("B")
-    assert player_pool.contains_player("  bEe  ")
+    assert player_pool.contains_name("bEe")
+    assert player_pool.contains_name("B")
+    assert player_pool.contains_name("  bEe  ")
 
     # Construct another player pool with a subset of all players
     player_pool_subset = PlayerNamePool(all_players[:3])
@@ -57,6 +57,6 @@ def test_player_pool_name_get_contains() -> None:
     curr_pool = PlayerNamePool(all_players)
     new_pool = PlayerNamePool.remove_subset_from(curr_pool, all_players[:3])
     assert curr_pool.contains_pool(new_pool)
-    assert new_pool.contains_player("D")
-    assert new_pool.contains_player("E")
+    assert new_pool.contains_name("D")
+    assert new_pool.contains_name("E")
     assert new_pool.num_players == 2

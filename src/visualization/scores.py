@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt  # type: ignore
 from src.data_types.player import Player, PlayerAssignment, PlayerRole
 
 
-def primary_role_score_histogram(players: list[Player]) -> None:
+def role_score_histogram(players: list[Player]) -> None:
     # TODO(jasminedeng): test manually
     bins = list(range(11))  # 0-10 (inclusive) since scores are roughly 1-10
 
