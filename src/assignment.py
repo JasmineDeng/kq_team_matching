@@ -2,12 +2,13 @@ import logging
 import math
 import os
 import random
-from typing import Callable, Dict, List, NamedTuple, Optional, Set, Tuple
+from typing import Dict, List, NamedTuple, Optional, Set, Tuple
 
 from src.data_types.exclusion import Exclusion
 from src.data_types.player import BasePlayerAssignment, Player, PlayerAssignment, PlayerRole
 from src.data_types.player_pool import PlayerPool
 from src.data_types.team import Team, TeamComposition, roles_to_average_score
+from src.exceptions import WrongNumberOfPlayersException, assignment_to_names, player_to_names
 from src.sampling import PlayerSamplingStrategy, get_players_for_role, sample_players
 
 log_level = os.environ.get("LOG_LEVEL", "INFO")
@@ -60,7 +61,7 @@ class _PlayerGroup(BasePlayerAssignment):
         return round(existing_score + average_scores, 3)
 
     def __str__(self) -> str:
-        return f"players: {_player_to_names([p.player for p in self.players])}, score: {self.score}, weighted {self.weighted_score}\n"
+        return f"players: {player_to_names([p.player for p in self.players])}, score: {self.score}, weighted {self.weighted_score}\n"
 
     def __repr__(self) -> str:
         return str(self)
@@ -80,21 +81,6 @@ def _sort_by_score_fn(assigned_player: BasePlayerAssignment) -> Tuple[float, flo
     return assigned_player.weighted_score, random.random()
 
 
-def _get_sort_by_role_score_fn(role: PlayerRole) -> Callable[[Player], float]:
-    def _sort_fn(player: Player) -> float:
-        return player.ranking[role]
-
-    return _sort_fn
-
-
-def _player_to_names(players: List[Player]) -> List[str]:
-    return [p.name for p in players]
-
-
-def _assignment_to_names(assignments: list[PlayerAssignment]) -> List[str]:
-    return [a.player.name for a in assignments]
-
-
 def _validate_required_roles(
     num_teams: int, total_players: list[Player], inclusion_set: list[list[PlayerAssignment]]
 ) -> None:
@@ -103,10 +89,21 @@ def _validate_required_roles(
     Create and print a helpful error string that will indicate who was assigned the role, if they are in an inclusion
     set, or if they were assigned the role but that role was removed due to being in an inclusion set.
     """
-    all_inclusion_set_names = _assignment_to_names(sum(inclusion_set, []))
-    for required_role in set(TeamComposition.roles):
+    all_inclusion_set_names = assignment_to_names(sum(inclusion_set, []))
+    checked_roles = set()
+
+    for required_role in TeamComposition.roles:
         if TeamComposition.role_allows_fill(required_role):
             continue
+
+        if required_role in checked_roles:
+            continue
+
+        # There may be repeated roles in team composition, so we must check all of them, but want
+        # to avoid checking the same role multiple times.
+        # We don't convert the roles into a set because set ordering is not guaranteed, and it is useful
+        # to maintain a consistent order for the error message.
+        checked_roles.add(required_role)
 
         # Get the number of players in this role in an inclusion set.
         assignments_in_inclusion = []
@@ -136,26 +133,11 @@ def _validate_required_roles(
         # 2. We don't require an exact count, but the role does not allow fills, and the number of players is less than
         #   the number of teams.
         if not TeamComposition.is_num_assignments_valid(required_role, num_teams, len(total_assignments_for_role)):
-            too_many_players = len(total_assignments_for_role) > num_teams
-            help_str = "Remove" if too_many_players else "Add"
-            add_help_str = (
-                f"{', '.join(_assignment_to_names(overriden_assignments_in_inclusion))} player(s) "
-                f"previously had role {required_role} but were overriden because they are in an inclusion set.\n"
-                if overriden_assignments_in_inclusion
-                else "No one's role was overriden in an inclusion set.\n"
-            )
-            diff = abs(len(total_assignments_for_role) - num_teams)
-            inclusion_set_str = (
-                f"{', '.join(_assignment_to_names(assignments_in_inclusion))} player(s) are assigned to an inclusion set"
-                if assignments_in_inclusion
-                else "No one with that role is in an inclusion set"
-            )
-            raise ValueError(
-                f"For role {required_role}, there are {len(total_assignments_for_role)} player(s), but {num_teams} "
-                f"teams. {inclusion_set_str}, and in total, "
-                f"we have: {', '.join(_assignment_to_names(total_assignments_for_role))} player(s).\n"
-                f"{add_help_str if not too_many_players else ''}"
-                f"{help_str} {diff} player(s) with role {required_role}."
+            raise WrongNumberOfPlayersException(
+                expected_number=num_teams,
+                role=required_role,
+                players=total_assignments_for_role,
+                players_in_inclusion=assignments_in_inclusion,
             )
 
 
