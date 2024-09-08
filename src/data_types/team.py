@@ -28,12 +28,11 @@ class PlayerRoleMetadata(NamedTuple):
     that role on the team.
     """
 
-    requires_exact_count: bool
-    """If True, then this role must have the exact number of players defined in the TeamComposition during assignment.
+    max_allowed_fills: int = 0
+    """The number of fill players allowed for this role.
 
-    For example, for QUEEN and OBJECTIVE we may want exactly one queen per team, and one objective per team, so we
-    require the number of players with those roles to be exactly the number of teams. But we may have other roles that
-    may be interchangeable, like speed and vanilla (not currently implemented).
+    If allows_fill is False, then this value is ignored. This number must be less than the number of players in this
+    role defined in the team composition.
     """
 
 
@@ -54,15 +53,16 @@ class TeamComposition:
         PlayerRole.QUEEN,
         PlayerRole.FLEX,
         PlayerRole.FLEX,
+        PlayerRole.FLEX,
         PlayerRole.OBJECTIVE,
     ]
 
     @classmethod
     def role_metadata(cls) -> dict[PlayerRole, PlayerRoleMetadata]:
         metadata_list = [
-            PlayerRoleMetadata(role=PlayerRole.QUEEN, allows_fill=False, requires_exact_count=True),
-            PlayerRoleMetadata(role=PlayerRole.FLEX, allows_fill=True, requires_exact_count=False),
-            PlayerRoleMetadata(role=PlayerRole.OBJECTIVE, allows_fill=False, requires_exact_count=True),
+            PlayerRoleMetadata(role=PlayerRole.QUEEN, allows_fill=False),
+            PlayerRoleMetadata(role=PlayerRole.FLEX, allows_fill=True, max_allowed_fills=1),
+            PlayerRoleMetadata(role=PlayerRole.OBJECTIVE, allows_fill=False),
         ]
         roles_to_return = [val.role for val in metadata_list]
         assert all(role in cls.roles for role in roles_to_return)
@@ -80,12 +80,28 @@ class TeamComposition:
         return cls.get_role_metadata(role).allows_fill
 
     @classmethod
+    def required_roles(cls) -> List[PlayerRole]:
+        return [role for role, metadata in cls.role_metadata().items() if not metadata.allows_fill]
+
+    @classmethod
+    def fill_roles(cls) -> List[PlayerRole]:
+        return [role for role, metadata in cls.role_metadata().items() if metadata.allows_fill]
+
+    @classmethod
     def role_counts(cls) -> List[Tuple[PlayerRole, int]]:
         """Return a list of the role and the corresponding count in the same order as the roles list."""
         counts: Dict[PlayerRole, int] = defaultdict(int)
         for role in cls.roles:
             counts[role] += 1
         return [(role, counts[role]) for role in counts]
+
+    @classmethod
+    def role_counts_dict(cls) -> Dict[PlayerRole, int]:
+        """Return a dict of the role and the corresponding count in the same order as the roles list."""
+        counts: Dict[PlayerRole, int] = defaultdict(int)
+        for role in cls.roles:
+            counts[role] += 1
+        return counts
 
     @classmethod
     def total_score_for_ranking(cls, ranking: Dict[PlayerRole, float]) -> float:
@@ -106,15 +122,27 @@ class TeamComposition:
             team_counts[player.assigned_role] += 1
         # If diff > 0, then the team has extra players, otherwise they are missing a player.
         team_player_diff: Dict[PlayerRole, float] = {
-            role: team_counts[role] - role_counts[role] for role in role_counts
+            role: role_counts[role] - team_counts[role] for role in role_counts
         }
         err_str = ""
         for role, diff in team_player_diff.items():
-            if allow_missing and diff < 0:
+            if allow_missing and diff > 0:
                 continue
-            allows_fill = cls.role_allows_fill(role)
-            if (not allows_fill and diff != 0) or (allows_fill and diff > 0):
-                err_str += f"Should have had {role_counts[role]} players {role.name} but got {team_counts[role]}!\n"
+            metadata = cls.get_role_metadata(role)
+
+            mismatch_role_err_str = (
+                f"Should have had {role_counts[role]} players {role.name} but got {team_counts[role]}!\n"
+            )
+            # Regardless of fill or not, if the team has more players than expected, then it's an error.
+            if diff < 0:
+                err_str += mismatch_role_err_str
+            # If the team has a different number of players than expected, then it's an error if fills are not allowed.
+            elif not metadata.allows_fill and diff != 0:
+                err_str += mismatch_role_err_str
+            # If the team has a different number of players than expected, then it's an error if fills are allowed and the
+            # number of fills is greater than the max allowed fills.
+            elif metadata.allows_fill and diff > metadata.max_allowed_fills:
+                err_str += mismatch_role_err_str
         if err_str:
             err_str += f"Team players: {[p.player.name for p in team]}"
             raise ValueError(err_str)
@@ -140,18 +168,12 @@ class TeamComposition:
     @classmethod
     def is_num_assignments_valid(cls, role: PlayerRole, num_teams: int, num_assignments: int) -> bool:
         role_metadata = cls.get_role_metadata(role)
-        # Two scenarios:
-        # 1. The role requires an exact count, so the number of assignments must be equal to the number of teams.
-        # 2. The role does not require an exact count, but if the role does not allow fills, then the number of
-        #   assignments must be equal to the number of teams.
-        # We do not consider the case where the number of assignments is greater than the number of teams.
-        if role_metadata.requires_exact_count:
-            return num_assignments == num_teams
-        # Now the role does not require exact count, but cannot have fills.
+        # If the role cannot have fills, it must have exactly the number of teams.
         if not role_metadata.allows_fill:
-            return num_assignments >= num_teams
-        # If it does allow fills, then it can have any number.
-        return True
+            return num_teams == num_assignments
+        # If it does allow fills, then can have at most the max allowed fills.
+        missing_assignments = num_teams - num_assignments
+        return missing_assignments <= role_metadata.max_allowed_fills
 
 
 class Team:
@@ -184,11 +206,6 @@ class Team:
         if self._queen is None:
             raise ValueError("No queen found for team!")
         return self._queen
-
-    def speed_or_raise(self) -> PlayerAssignment:
-        if self._speed is None:
-            raise ValueError("No speed found for team!")
-        return self._speed
 
     def objective_or_raise(self) -> PlayerAssignment:
         if self._objective is None:

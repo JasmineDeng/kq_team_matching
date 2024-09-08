@@ -5,7 +5,7 @@ import pytest
 from src.assignment import _contains_exclusion_set, _validate_required_roles, assign_players_to_teams
 from src.data_types.exclusion import Exclusion
 from src.data_types.player import Player, PlayerAssignment, PlayerRole
-from src.data_types.player_pool import PlayerPool
+from src.data_types.player_pool import PlayerNamePool
 from src.data_types.team import Team
 from src.exceptions import WrongNumberOfPlayersException, assignment_to_names
 
@@ -50,7 +50,7 @@ def test_contains_exclusion_set() -> None:
         _player_one_role("C", PlayerRole.OBJECTIVE, 5),
     ]
     all_players = players + [_player_one_role("D", PlayerRole.FLEX, 5)]
-    player_pool = PlayerPool(players)
+    player_pool = PlayerNamePool(players)
 
     exclusion_players = _contains_exclusion_set(player_pool, _name_list_to_exclusions([["A", "B"]], all_players))
     assert exclusion_players is not None
@@ -72,7 +72,7 @@ def test_happy_assignment() -> None:
         _player_one_role("D", PlayerRole.FLEX, 5),
         _player_one_role("E", PlayerRole.FLEX, 5),
     ]
-    teams = assign_players_to_teams(PlayerPool(all_players), [], [])
+    teams = assign_players_to_teams(PlayerNamePool(all_players), [], [])
     assert len(teams) == 1
     assert set({p.player.name for p in teams[0].players}) == {"A", "B", "C", "D", "E"}
 
@@ -90,7 +90,7 @@ def test_exclusion_set() -> None:
         _player_one_role("G", PlayerRole.FLEX, 5),
         _player_one_role("H", PlayerRole.OBJECTIVE, 5),
     ]
-    teams = assign_players_to_teams(PlayerPool(all_players), [], [])
+    teams = assign_players_to_teams(PlayerNamePool(all_players), [], [])
     assert len(teams) == 2
     # Sort by team name (queen name)
     teams.sort(key=lambda team: team.team_name)
@@ -99,7 +99,7 @@ def test_exclusion_set() -> None:
     team_player_names = _team_to_player_names(teams[1])
     assert "E" in team_player_names and "B" in team_player_names
 
-    teams = assign_players_to_teams(PlayerPool(all_players), [], [Exclusion(all_players[0], all_players[5], False)])
+    teams = assign_players_to_teams(PlayerNamePool(all_players), [], [Exclusion(all_players[0], all_players[5], False)])
     assert len(teams) == 2
     # Sort by team name (queen name)
     teams.sort(key=lambda team: team.team_name)
@@ -125,7 +125,7 @@ def test_exclusion_set_queen_only() -> None:
     # NOTE: null case is missing because original non-exclusion UT covers it
 
     # A and F should play together as A doesn't want F to queen, but F doesn't care
-    teams = assign_players_to_teams(PlayerPool(all_players), [], [Exclusion(all_players[0], all_players[5], True)])
+    teams = assign_players_to_teams(PlayerNamePool(all_players), [], [Exclusion(all_players[0], all_players[5], True)])
     assert len(teams) == 2
     # Sort by team name (queen name)
     teams.sort(key=lambda team: team.team_name)
@@ -135,7 +135,7 @@ def test_exclusion_set_queen_only() -> None:
     assert "E" in team_player_names and "B" in team_player_names
 
     # F doesn't want A to queen
-    teams = assign_players_to_teams(PlayerPool(all_players), [], [Exclusion(all_players[5], all_players[0], False)])
+    teams = assign_players_to_teams(PlayerNamePool(all_players), [], [Exclusion(all_players[5], all_players[0], False)])
     assert len(teams) == 2
     # Sort by team name (queen name)
     teams.sort(key=lambda team: team.team_name)
@@ -159,12 +159,12 @@ def test_allows_flex_fills() -> None:
         _player_one_role("F", PlayerRole.OBJECTIVE, 8),
     ]
     with pytest.raises(WrongNumberOfPlayersException):
-        assign_players_to_teams(PlayerPool(all_players), [], [])
+        assign_players_to_teams(PlayerNamePool(all_players), [], [])
 
     all_players.append(
         _player_one_role("H", PlayerRole.SPEED, 8),
     )
-    teams = assign_players_to_teams(PlayerPool(all_players), [], [])
+    teams = assign_players_to_teams(PlayerNamePool(all_players), [], [])
     assert len(teams) == 2
 
 
@@ -184,7 +184,7 @@ def test_inclusion_set() -> None:
         _player_one_role("G", PlayerRole.FLEX, 5),
         _player_one_role("H", PlayerRole.OBJECTIVE, 5),
     ]
-    player_pool = PlayerPool(all_players)
+    player_pool = PlayerNamePool(all_players)
     # Not enough objective/speed players
     inclusion_set = [[PlayerAssignment(b_player, PlayerRole.FLEX), PlayerAssignment(c_player, PlayerRole.FLEX)]]
     with pytest.raises(WrongNumberOfPlayersException):

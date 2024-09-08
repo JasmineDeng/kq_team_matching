@@ -5,7 +5,7 @@ from src.data_types.player_pool import PlayerNamePool
 class Exclusion:
     """Two players who will not play together, at least given certain criteria.
 
-    Behind the scenes it is implemented using a PlayerPool, as that handles all the weirdness around names
+    Behind the scenes it is implemented using a PlayerNamePool, as that handles all the weirdness around names
     """
 
     def __init__(self, requester: Player, other_player: Player, only_if_they_queen: bool) -> None:

@@ -17,6 +17,7 @@ same name.
 """
 
 NameT = TypeVar("NameT", bound=BaseName)
+OtherNameT = TypeVar("OtherNameT", bound=BaseName)
 
 
 class PlayerNamePool(Generic[NameT]):
@@ -86,14 +87,23 @@ class PlayerNamePool(Generic[NameT]):
                 return self._name_to_players[alias].name
         return name
 
-    def contains_player(self, name: str) -> bool:
+    def contains_name(self, name: str) -> bool:
         """Return True if the player pool contains a player with the given name."""
         name_key = self._get_aliased_key(name)
         return name_key in self._name_to_players
 
-    def contains_pool(self, other_pool: "PlayerNamePool[NameT]") -> bool:
-        """Return True if this pool contains all players in the other pool."""
-        return all([self.contains_player(p.name) for p in other_pool.players])
+    def contains_pool(self, other_pool: "PlayerNamePool[OtherNameT]") -> bool:
+        """Return True if this pool contains all players (identified by name) in the other pool.
+
+        The specific type of the other pool is not checked.
+        """
+        return all([self.contains_name(p.name) for p in other_pool.players])
+
+    def are_players_equal(self, player1: BaseName, player2: BaseName) -> bool:
+        """Return True if the two players are the same."""
+        player1_key = self._get_aliased_key(player1.name)
+        player2_key = self._get_aliased_key(player2.name)
+        return player1_key == player2_key
 
     @classmethod
     def add(cls, player_pool: "PlayerNamePool[NameT]", players: list[NameT]) -> "PlayerNamePool[NameT]":
@@ -107,7 +117,7 @@ class PlayerNamePool(Generic[NameT]):
     def remove_subset_from(self, subset_to_remove: list[NameT]) -> "PlayerNamePool[NameT]":
         """Return a new player pool with the given players removed."""
         pool_subset_to_remove = PlayerNamePool(subset_to_remove)
-        new_players = [p for p in self.players if not pool_subset_to_remove.contains_player(p.name)]
+        new_players = [p for p in self.players if not pool_subset_to_remove.contains_name(p.name)]
         return PlayerNamePool(new_players)
 
     def __str__(self) -> str:
