@@ -182,6 +182,21 @@ class Team:
             return None
         return players[0]
 
+    def queen_or_raise(self) -> PlayerAssignment:
+        if self._queen is None:
+            raise ValueError("No queen found for team!")
+        return self._queen
+
+    def speed_or_raise(self) -> PlayerAssignment:
+        if self._speed is None:
+            raise ValueError("No speed found for team!")
+        return self._speed
+
+    def objective_or_raise(self) -> PlayerAssignment:
+        if self._objective is None:
+            raise ValueError("No objective found for team!")
+        return self._objective
+
     @property
     def total_score(self) -> float:
         return sum([p.score for p in self.players])
