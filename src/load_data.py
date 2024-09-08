@@ -81,6 +81,14 @@ def load_attendance(csv_path: str, player_pool: PlayerPool) -> PlayerPool:
     return PlayerPool(player_list)
 
 
+def _str_to_bool(value: str) -> bool:
+    if value == "TRUE":
+        return True
+    if value == "FALSE":
+        return False
+    raise ValueError(f"Could not convert {value} to boolean, must be one of 'TRUE' or 'FALSE'")
+
+
 def load_exclusion_set(csv_path: str, player_pool: PlayerPool) -> list[Exclusion]:
     """Given a csv, load sets of people who should not play on the same team."""
     exclusion_set = []
@@ -96,7 +104,7 @@ def load_exclusion_set(csv_path: str, player_pool: PlayerPool) -> list[Exclusion
 
             only_if_they_queen = False
             if len(row) > 2:
-                only_if_they_queen = bool(row[2])
+                only_if_they_queen = _str_to_bool(row[2])
 
             exclusion_set.append(Exclusion(requestor, other_player, only_if_they_queen))
 

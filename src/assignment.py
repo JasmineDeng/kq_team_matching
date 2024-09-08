@@ -159,21 +159,29 @@ def _validate_required_roles(
             )
 
 
-def _players_to_assignment(players: List[Player], role: PlayerRole) -> List[PlayerAssignment]:
-    return [PlayerAssignment(player=p, assigned_role=role) for p in players]
-
-
 def _contains_exclusion_set(players: PlayerPool, exclusion_set: list[Exclusion]) -> Optional[PlayerPool]:
-    """Check if the set of players violates an exclusion set."""
+    """Check if the set of players violates an exclusion set.
+
+    If the players in PlayerPool contains an exclusion set, return the set of players that violate the exclusion set.
+    """
+    player_names = [p.name for p in players.players]
     for exclusion in exclusion_set:
+        exclusion_names = {exclusion.requester.name, exclusion.other_player.name}
+        if set(player_names) == {"Chaz", "Felix"} and ("Chaz" in exclusion_names and "Felix" in exclusion_names):
+            import ipdb
+
+            ipdb.set_trace()
+
         if players.contains_pool(exclusion.player_pool):
             if exclusion.only_if_they_queen:
-                # We need to confirm that the second player wants to queen.  That means they must be the first queen
-                # found in the existing player_pool as well
+                # If only_if_they_queen is set to True, then the exclusion only applies if specifically the SECOND player in the
+                # exclusion is queening. If neither players are queens, then the exclusion does not apply.
                 queen_pool = PlayerPool.filter(players, [PlayerRole.QUEEN])
                 other_name = exclusion.other_player.name
-                if (queen_pool.contains_player(other_name) and
-                        queen_pool.get_player(other_name) == queen_pool.players[0]):
+                if (
+                    queen_pool.contains_player(other_name)
+                    and queen_pool.get_player(other_name) == queen_pool.players[0]
+                ):
                     return exclusion.player_pool
             else:
                 return exclusion.player_pool
