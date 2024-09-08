@@ -158,7 +158,7 @@ def test_allows_flex_fills() -> None:
         _player_one_role("E", PlayerRole.QUEEN, 8),
         _player_one_role("F", PlayerRole.OBJECTIVE, 8),
     ]
-    with pytest.raises(ValueError):
+    with pytest.raises(WrongNumberOfPlayersException):
         assign_players_to_teams(PlayerPool(all_players), [], [])
 
     all_players.append(
@@ -187,13 +187,13 @@ def test_inclusion_set() -> None:
     player_pool = PlayerPool(all_players)
     # Not enough objective/speed players
     inclusion_set = [[PlayerAssignment(b_player, PlayerRole.FLEX), PlayerAssignment(c_player, PlayerRole.FLEX)]]
-    with pytest.raises(ValueError):
+    with pytest.raises(WrongNumberOfPlayersException):
         assign_players_to_teams(player_pool, inclusion_set, [])
     # Too many objective players should raise an error
     inclusion_set = [
         [PlayerAssignment(b_player, PlayerRole.OBJECTIVE), PlayerAssignment(c_player, PlayerRole.OBJECTIVE)]
     ]
-    with pytest.raises(ValueError):
+    with pytest.raises(WrongNumberOfPlayersException):
         assign_players_to_teams(player_pool, inclusion_set, [])
     # Too many speed players should NOT raise an error
     inclusion_set = [[PlayerAssignment(b_player, PlayerRole.SPEED), PlayerAssignment(c_player, PlayerRole.OBJECTIVE)]]
@@ -236,19 +236,19 @@ def test_validate_required_roles() -> None:
         total_team_num,
         all_players,
         [
-            [team1._queen, team2._speed],
-            [team2._queen, team3._objective],
+            [team1.queen_or_raise(), team2.speed_or_raise()],
+            [team2.queen_or_raise(), team3.objective_or_raise()],
         ],
     )
 
     # This will not pass because now we are missing obj.
-    team2_obj = team2._objective.player
+    team2_obj = team2.objective_or_raise().player
     try:
         _validate_required_roles(
             total_team_num,
             all_players,
             [
-                [team1._queen, PlayerAssignment(team2_obj, PlayerRole.SPEED)],
+                [team1.queen_or_raise(), PlayerAssignment(team2_obj, PlayerRole.SPEED)],
             ],
         )
     except WrongNumberOfPlayersException as e:
@@ -256,7 +256,9 @@ def test_validate_required_roles() -> None:
         # We do not have enough obj players because team2_obj is in the inclusion set.
         assert e.expected_number == total_team_num
         assert e.role == PlayerRole.OBJECTIVE
-        assert set(assignment_to_names(e.players)) == set(assignment_to_names([team1._objective, team3._objective]))
+        assert set(assignment_to_names(e.players)) == set(
+            assignment_to_names([team1.objective_or_raise(), team3.objective_or_raise()])
+        )
         assert e.players_in_inclusion == []
 
     # If we just remove queens from the player list, we will get an error.
@@ -271,7 +273,7 @@ def test_validate_required_roles() -> None:
         assert e.players_in_inclusion == []
 
     # Too many queens will also cause an error, but not if one is overridden to another role.
-    team1_queen = team1._queen.player
+    team1_queen = team1.queen_or_raise().player
     _validate_required_roles(
         total_team_num,
         all_players + [_player_one_role("foo", PlayerRole.QUEEN, 10)],
@@ -280,8 +282,8 @@ def test_validate_required_roles() -> None:
 
     # Adding an extra queen finally will just cause an error.
     extra_queen = _player_one_role("foo", PlayerRole.QUEEN, 10).to_primary_role_assignment()
-    team1_queen = team1._queen.player
-    team1_speed = team1._speed.player
+    team1_queen = team1.queen_or_raise().player
+    team1_speed = team1.speed_or_raise().player
     try:
         _validate_required_roles(
             total_team_num,
@@ -289,7 +291,7 @@ def test_validate_required_roles() -> None:
             # Inclusion shouldn't matter here. The overall counts are thes ame since we effectively
             # swapped queen and speed roles for two players.
             [
-                [extra_queen, team1._objective],
+                [extra_queen, team1.objective_or_raise()],
                 [PlayerAssignment(team1_queen, PlayerRole.SPEED), PlayerAssignment(team1_speed, PlayerRole.QUEEN)],
             ],
         )
@@ -297,6 +299,6 @@ def test_validate_required_roles() -> None:
         assert e.expected_number == total_team_num
         assert e.role == PlayerRole.QUEEN
         assert set(assignment_to_names(e.players)) == set(
-            assignment_to_names([team1._speed, team2._queen, team3._queen, extra_queen])
+            assignment_to_names([team1.speed_or_raise(), team2.queen_or_raise(), team3.queen_or_raise(), extra_queen])
         )
         assert set(assignment_to_names(e.players_in_inclusion)) == {"foo", team1_speed.name}
