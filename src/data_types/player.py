@@ -26,7 +26,7 @@ class BaseName:
         raise NotImplementedError
 
 
-class Player:
+class Player(BaseName):
     def __init__(self, name: str, ranking: Dict[PlayerRole, float]) -> None:
 
         for role, rank in ranking.items():
@@ -74,7 +74,7 @@ class BasePlayerAssignment:
         raise NotImplementedError
 
 
-class PlayerAssignment(BasePlayerAssignment):
+class PlayerAssignment(BaseName, BasePlayerAssignment):
     def __init__(self, player: Player, assigned_role: PlayerRole) -> None:
         self.player = player
         self.assigned_role = assigned_role

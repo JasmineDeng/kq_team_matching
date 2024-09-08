@@ -3,81 +3,39 @@ import math
 import random
 from typing import List
 
-from src.data_types.player import Player, PlayerAssignment, PlayerRole
+from src.data_types.player import PlayerAssignment, PlayerRole
+from src.data_types.player_pool import PlayerNamePool
 
 
 class PlayerSamplingStrategy(enum.Enum):
     """Enum representing the ways we sample players for a given role."""
 
-    PRIORITIZE_PREFERRED_ROLE = 0
-    PRIORITIZE_HIGHEST_SCORE = 1
-    ONLY_PREFERRED_ROLE = 2
-    UNIFORM_SCORE = 3
-    RANDOM = 4
+    PRIORITIZE_HIGHEST_SCORE = enum.auto()
+    UNIFORM_SCORE = enum.auto()
+    RANDOM = enum.auto()
 
 
-def get_players_for_role(players: List[PlayerAssignment], role: PlayerRole) -> List[PlayerAssignment]:
-    return [p for p in players if p.assigned_role == role]
+def get_players_for_role(player_pool: PlayerNamePool[PlayerAssignment], role: PlayerRole) -> List[PlayerAssignment]:
+    return [p for p in player_pool.players if p.assigned_role == role]
 
 
-def _make_sort_fn_score_random_tie_break(role: PlayerRole) -> tuple:
-    def _sort_fn(player: Player) -> tuple:
-        return player.ranking[role], random.random()
-
-    return _sort_fn
+def _sort_fn_random_tie_break(player: PlayerAssignment) -> tuple[float, float]:
+    return player.score, random.random()
 
 
-def _sample_players_by_highest_score(
-    players: List[Player], num_required: int, role: PlayerRole
-) -> List[PlayerAssignment]:
+def _sample_players_by_highest_score(all_players: List[PlayerAssignment], num_required: int) -> List[PlayerAssignment]:
     """Select players for their provided role, based on the player's score.
 
     This method selects the players for the role with the highest score. Ties are broken if the role is a person's
     primary role, but the primary role is mostly ignored.
     """
-    all_players = get_players_for_role(players, role)
     # We must sort this reversed since we want to select the strongest players. Players with the role as their primary
     # role have [1] in the second element, so they will also be prioritized via tie break.
-    sort_fn = _make_sort_fn_score_random_tie_break(role)
-    all_players.sort(key=sort_fn, reverse=True)
+    all_players.sort(key=_sort_fn_random_tie_break, reverse=True)
     return all_players[:num_required]
 
 
-def _sample_players_by_preferred_role(
-    players: List[Player], num_required: int, role: PlayerRole
-) -> List[PlayerAssignment]:
-    """Select players for the provided role, based on the player's preferred role.
-
-    This method prioritizes that role people want to play; we only select the players for their other roles if
-    there are not enough people with the primary role.
-
-    Primary players denote players who have the role as their primary role.
-    """
-    primary_players = [PlayerAssignment(player=p, assigned_role=role) for p in players if p.primary_role == role]
-    remaining_players = [PlayerAssignment(player=p, assigned_role=role) for p in players]
-    if len(primary_players) >= num_required:
-        return random.sample(primary_players, num_required)
-    if len(primary_players) + len(remaining_players) < num_required:
-        return primary_players + remaining_players
-    num_required_remaining = num_required - len(primary_players)
-    remaining_players_sample = random.sample(remaining_players, num_required_remaining)
-    return primary_players + remaining_players_sample
-
-
-def _sample_players_only_preferred_role(
-    players: List[Player], num_required: int, role: PlayerRole
-) -> List[PlayerAssignment]:
-    """Select players who MUST have the role as their primary role."""
-    primary_players = [PlayerAssignment(player=p, assigned_role=role) for p in players if p.primary_role == role]
-    if len(primary_players) < num_required:
-        raise ValueError(f"Not enough players with primary role {role} for required amount {num_required}")
-    if len(primary_players) > num_required:
-        return random.sample(primary_players, num_required)
-    return primary_players
-
-
-def _sample_players_uniform(players: List[Player], num_required: int, role: PlayerRole) -> List[PlayerAssignment]:
-    all_players = get_players_for_role(players, role)
+def _sample_players_uniform(all_players: List[PlayerAssignment], num_required: int) -> List[PlayerAssignment]:
     all_players = sorted(all_players, key=lambda p: p.score, reverse=True)
     stride = math.ceil(len(all_players) / num_required)
     to_return = []
@@ -98,19 +56,17 @@ def _sample_players_uniform(players: List[Player], num_required: int, role: Play
 
 
 def sample_players(
-    player_sampling_strategy: PlayerSamplingStrategy, players: List[Player], num_required: int, role: PlayerRole
+    player_sampling_strategy: PlayerSamplingStrategy,
+    players: PlayerNamePool[PlayerAssignment],
+    num_required: int,
+    role: PlayerRole,
 ) -> List[PlayerAssignment]:
-    if player_sampling_strategy == PlayerSamplingStrategy.PRIORITIZE_PREFERRED_ROLE:
-        return _sample_players_by_preferred_role(players, num_required, role)
-    elif player_sampling_strategy == PlayerSamplingStrategy.PRIORITIZE_HIGHEST_SCORE:
-        return _sample_players_by_highest_score(players, num_required, role)
-    elif player_sampling_strategy == PlayerSamplingStrategy.ONLY_PREFERRED_ROLE:
-        return _sample_players_only_preferred_role(players, num_required, role)
+    all_players_for_role = get_players_for_role(players, role)
+
+    if player_sampling_strategy == PlayerSamplingStrategy.PRIORITIZE_HIGHEST_SCORE:
+        return _sample_players_by_highest_score(all_players_for_role, num_required)
     elif player_sampling_strategy == PlayerSamplingStrategy.UNIFORM_SCORE:
-        return _sample_players_uniform(players, num_required, role)
+        return _sample_players_uniform(all_players_for_role, num_required)
     elif player_sampling_strategy == PlayerSamplingStrategy.RANDOM:
-        return [
-            PlayerAssignment(player=p, assigned_role=role)
-            for p in random.sample(players, min(len(players), num_required))
-        ]
+        return random.sample(all_players_for_role, num_required)
     raise NotImplementedError(f"No sampling strategy defined for enum: {player_sampling_strategy}")

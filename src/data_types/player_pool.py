@@ -1,6 +1,6 @@
 from typing import Generic, List, Set, TypeVar
 
-from src.data_types.player import BaseName, Player
+from src.data_types.player import BaseName
 
 NAME_ALIASES: List[Set[str]] = [
     {"Matt", "Matthew", "Matt Wu"},
@@ -91,22 +91,24 @@ class PlayerNamePool(Generic[NameT]):
         name_key = self._get_aliased_key(name)
         return name_key in self._name_to_players
 
-    def contains_pool(self, other_pool: "PlayerNamePool") -> bool:
+    def contains_pool(self, other_pool: "PlayerNamePool[NameT]") -> bool:
         """Return True if this pool contains all players in the other pool."""
         return all([self.contains_player(p.name) for p in other_pool.players])
 
     @classmethod
-    def add(cls, player_pool: "PlayerNamePool", players: list[Player]) -> "PlayerNamePool":
-        """Return a new player pool with the given players added."""
+    def add(cls, player_pool: "PlayerNamePool[NameT]", players: list[NameT]) -> "PlayerNamePool[NameT]":
+        """Return a new player pool with the given objects added.
+
+        The player list members must be the same type as the original player pool.
+        """
         new_players = player_pool.players + players
         return cls(new_players)
 
-    @classmethod
-    def remove_subset_from(cls, player_pool: "PlayerNamePool", players: list[Player]) -> "PlayerNamePool":
+    def remove_subset_from(self, subset_to_remove: list[NameT]) -> "PlayerNamePool[NameT]":
         """Return a new player pool with the given players removed."""
-        subset_to_remove = cls(players)
-        new_players = [p for p in player_pool.players if not subset_to_remove.contains_player(p.name)]
-        return cls(new_players)
+        pool_subset_to_remove = PlayerNamePool(subset_to_remove)
+        new_players = [p for p in self.players if not pool_subset_to_remove.contains_player(p.name)]
+        return PlayerNamePool(new_players)
 
     def __str__(self) -> str:
-        return f"PlayerAssignmentPool({self.players})"
+        return f"PlayerNamePool({self.players})"

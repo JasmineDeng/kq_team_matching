@@ -6,7 +6,7 @@ from typing import Callable, Dict, List, NamedTuple, Optional, Set, Tuple
 
 from src.data_types.exclusion import Exclusion
 from src.data_types.player import BasePlayerAssignment, Player, PlayerAssignment, PlayerRole
-from src.data_types.player_pool import PlayerNamePool, PlayerPool
+from src.data_types.player_pool import PlayerNamePool
 from src.data_types.team import Team, TeamComposition, roles_to_average_score
 from src.sampling import PlayerSamplingStrategy, get_players_for_role, sample_players
 
@@ -142,6 +142,7 @@ def _validate_required_roles(
         # 1. We require an exact count and the number of players is not equal to the number of teams.
         # 2. We don't require an exact count, but the role does not allow fills, and the number of players is less than
         #   the number of teams.
+        # TODO(jasminedeng): manually test this before merging.
         if not TeamComposition.is_num_assignments_valid(required_role, num_teams, len(total_assignments_for_role)):
             too_many_players = len(total_assignments_for_role) > num_teams
             help_str = "Remove" if too_many_players else "Add"
@@ -166,17 +167,19 @@ def _validate_required_roles(
             )
 
 
-def _contains_exclusion_set(players: PlayerPool, exclusion_set: list[Exclusion]) -> Optional[PlayerPool]:
+def _contains_exclusion_set(
+    players: PlayerNamePool[PlayerAssignment], exclusion_set: list[Exclusion]
+) -> PlayerNamePool[Player] | None:
     """Check if the set of players violates an exclusion set.
 
-    If the players in PlayerPool contains an exclusion set, return the set of players that violate the exclusion set.
+    If the players in the pool contains an exclusion set, return the set of players that violate the exclusion set.
     """
     for exclusion in exclusion_set:
         if players.contains_pool(exclusion.player_pool):
             if exclusion.only_if_they_queen:
                 # If only_if_they_queen is set to True, then the exclusion only applies if specifically the SECOND player in the
                 # exclusion is queening. If neither players are queens, then the exclusion does not apply.
-                queen_pool = PlayerPool.filter(players, [PlayerRole.QUEEN])
+                queen_pool = PlayerNamePool(get_players_for_role(players, PlayerRole.QUEEN))
                 other_name = exclusion.other_player.name
                 if (
                     queen_pool.contains_player(other_name)
@@ -189,12 +192,12 @@ def _contains_exclusion_set(players: PlayerPool, exclusion_set: list[Exclusion])
 
 
 def _get_match_exclusion_set_players(
-    all_players: PlayerPool, group: _PlayerGroup, exclusion_set: list[Exclusion]
+    all_players: PlayerNamePool[PlayerAssignment], group: _PlayerGroup, exclusion_set: list[Exclusion]
 ) -> Set[str]:
     """Given a list of all players and a group of players, return all players who CANNOT be put on the team."""
     to_exclude: Set[str] = set()
     for player in all_players.players:
-        possible_team = PlayerPool([p.player for p in group.players] + [player])
+        possible_team: PlayerNamePool[PlayerAssignment] = PlayerNamePool(list(group.players) + [player])
         if _contains_exclusion_set(possible_team, exclusion_set) is not None:
             to_exclude.add(player.name)
     return to_exclude
@@ -221,7 +224,7 @@ def _get_player_for_ideal_score(
 def _compute_ideal_score_for_group(
     groups: List[_PlayerGroup],
     groups_to_skip: List[_PlayerGroup],
-    players: PlayerPool,
+    players: PlayerNamePool[PlayerAssignment],
     role: PlayerRole,
     team_average_score: float,
 ) -> Optional[Dict[_PlayerGroup, float]]:
@@ -237,7 +240,7 @@ def _compute_ideal_score_for_group(
     The *actually* assigned player may differ from the ideal player once exclusion sets are accounted for.
     """
     possible_players_pre_exclusion = sorted(
-        [PlayerAssignment(player=p, assigned_role=role) for p in players.players],
+        get_players_for_role(players, role),
         key=_sort_by_score_fn,
         reverse=True,
     )
@@ -332,7 +335,7 @@ def _assign_players_with_exclusion_set(
             continue
         exclude_group.group.players.append(assignment)
         assigned_players.append(assignment)
-        possible_players = PlayerNamePool.remove_subset_from(possible_players, [assignment.player])
+        possible_players = possible_players.remove_subset_from(assignment.player)
         logger.debug(
             f"Excluding {exclude_group.to_exclude}, picked {assignment} for team {exclude_group.group}, "
             f"ideal score: {ideal_score}"
@@ -343,7 +346,7 @@ def _assign_players_with_exclusion_set(
     sampling_strategy = (
         PlayerSamplingStrategy.RANDOM if not use_uniform_sampling else PlayerSamplingStrategy.UNIFORM_SCORE
     )
-    sampled_players = sample_players(sampling_strategy, possible_players.players, len(groups_without_exclusion), role)
+    sampled_players = sample_players(sampling_strategy, possible_players, len(groups_without_exclusion), role)
     # Anecdotally, it seems to work better to sort by the player scores in this order.
     sampled_players = sorted(sampled_players, key=_sort_by_score_fn)
     groups_without_exclusion = sorted(groups_without_exclusion, key=_sort_by_score_fn, reverse=True)
@@ -374,9 +377,7 @@ def assign_players_to_teams(
         excluded = _contains_exclusion_set(PlayerNamePool([p.player for p in inclusion]), exclusion_set)
         if excluded is not None:
             raise ValueError(f"Can't assign teams when inclusion set: {inclusion} violates exclusion set: {excluded}")
-        player_pool: PlayerNamePool[Player] = PlayerNamePool.remove_subset_from(
-            player_pool, [p.player for p in inclusion]
-        )
+        player_pool: PlayerNamePool[Player] = player_pool.remove_subset_from([p.player for p in inclusion])
 
     # Validate that all the roles that do not allow fills are satisfied.
     _validate_required_roles(total_teams, player_pool, inclusion_set)
@@ -402,9 +403,7 @@ def assign_players_to_teams(
         ]
         logger.debug(f"Assigning {player_role.name} for groups {groups_to_assign}")
 
-        # if you can play speed, you can flex
-        valid_roles = [player_role] if player_role != PlayerRole.FLEX else [PlayerRole.FLEX, PlayerRole.SPEED]
-        player_pool_to_assign = PlayerPool.filter(player_pool, primary_roles=valid_roles)
+        player_pool_to_assign = get_players_for_role(player_pool, player_role)
 
         assigned_players = _assign_players_with_exclusion_set(
             groups_to_assign,
@@ -415,7 +414,7 @@ def assign_players_to_teams(
             role_averages,
             use_uniform_sampling,
         )
-        player_pool = PlayerPool.remove_subset_from(player_pool, [p.player for p in assigned_players])
+        player_pool = player_pool.remove_subset_from([p.player for p in assigned_players])
 
     if player_pool.num_players > 0:
         raise ValueError(f"Some people were not assigned! like: {[p.name for p in player_pool.players]}")
