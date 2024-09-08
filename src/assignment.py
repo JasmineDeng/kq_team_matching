@@ -164,14 +164,7 @@ def _contains_exclusion_set(players: PlayerPool, exclusion_set: list[Exclusion])
 
     If the players in PlayerPool contains an exclusion set, return the set of players that violate the exclusion set.
     """
-    player_names = [p.name for p in players.players]
     for exclusion in exclusion_set:
-        exclusion_names = {exclusion.requester.name, exclusion.other_player.name}
-        if set(player_names) == {"Chaz", "Felix"} and ("Chaz" in exclusion_names and "Felix" in exclusion_names):
-            import ipdb
-
-            ipdb.set_trace()
-
         if players.contains_pool(exclusion.player_pool):
             if exclusion.only_if_they_queen:
                 # If only_if_they_queen is set to True, then the exclusion only applies if specifically the SECOND player in the
