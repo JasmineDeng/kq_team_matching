@@ -1,5 +1,6 @@
 import csv
 import logging
+import os
 from collections import defaultdict
 from typing import Dict, List, NamedTuple, Optional, Tuple
 
@@ -304,6 +305,9 @@ class Team:
 
 
 def write_teams_to_csv(output_file_name: str, teams: list[Team]) -> None:
+    # Make the parent directory if it doesn't exist
+    os.makedirs(os.path.dirname(output_file_name), exist_ok=True)
+
     with open(output_file_name, "w") as f:
         writer = csv.writer(f)
         for team in teams:
