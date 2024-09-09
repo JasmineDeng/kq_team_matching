@@ -1,21 +1,16 @@
 import datetime
 import os
-from typing import Any
 
 import click
 
-from src.assignment import PlayerSamplingStrategy, assign_players_to_teams
+from src.assignment import assign_players_to_teams
 from src.cli_utils import prompt_yes_no
 from src.data_types.team import TeamComposition, read_teams_from_csv, roles_to_average_score, write_teams_to_csv
 from src.find_fills import find_fills
 from src.load_data import load_attendance, load_data, load_exclusion_set, load_inclusion_set
-from src.visualization.scores import primary_role_score_histogram
+from src.visualization.scores import role_score_histogram
 
 DATETIME_FORMAT = "%Y-%m-%d_%H:%M:%S"
-
-
-def _to_player_sampling_enum(_: Any, __: Any, value: str) -> PlayerSamplingStrategy:
-    return PlayerSamplingStrategy[value]
 
 
 def _parse_datetime(value: str) -> datetime.datetime | None:
@@ -26,25 +21,27 @@ def _parse_datetime(value: str) -> datetime.datetime | None:
         return None
 
 
-@click.group()
-def cli() -> None:
-    ...
+def _assign(
+    file_path: str, auto_yes_prompt: bool, data_dir: str | None = None, output_dir: str | None = None
+) -> str | None:
+    """End-to-end assign teams, find fills, and output teams.
 
+    Returns the file path to the output csv file, if it was saved.
+    """
+    if data_dir is None:
+        data_dir_to_use = os.path.join(os.path.dirname(__file__), "data")
+        output_dir_to_use = data_dir_to_use
+    else:
+        data_dir_to_use = data_dir
+        output_dir_to_use = output_dir
 
-@cli.command("assign")
-@click.option(
-    "--file-path",
-    "-f",
-    type=str,
-    required=True,
-    help="File path to csv file with player rankings.",
-)
-def assign(file_path: str) -> None:
     player_infos = load_data(file_path)
-    player_pool = load_attendance("data/attendance.csv", player_infos)
+    player_pool = load_attendance(
+        os.path.join(data_dir_to_use, "attendance.csv"), player_infos, scores_csv_path=file_path
+    )
 
-    inclusion_set = load_inclusion_set("data/inclusion_set.csv", player_pool)
-    exclusion_set = load_exclusion_set("data/exclusion_set.csv", player_infos)
+    inclusion_set = load_inclusion_set(os.path.join(data_dir_to_use, "inclusion_set.csv"), player_infos)
+    exclusion_set = load_exclusion_set(os.path.join(data_dir_to_use, "exclusion_set.csv"), player_infos)
     print(f"Loaded exclusion set: {', '.join([str(e) for e in exclusion_set])}")
     teams = assign_players_to_teams(player_pool, inclusion_set, exclusion_set)
     teams = sorted(teams, key=lambda t: t.total_score)
@@ -79,22 +76,16 @@ def assign(file_path: str) -> None:
         print(t.format(hide_scores=True))
 
     print("Save the teams to a csv?")
-    if prompt_yes_no():
+    if auto_yes_prompt or prompt_yes_no():
         date_str = datetime.datetime.now().strftime(DATETIME_FORMAT)
-        output_file_name = os.path.join(os.path.dirname(__file__), "data", "league_night", f"{date_str}.csv")
+        output_file_name = os.path.join(output_dir_to_use, "league_night", f"{date_str}.csv")
         write_teams_to_csv(output_file_name, teams)
+        return output_file_name
+
+    return None
 
 
-@cli.command("recompute")
-@click.option("--ranking-file-path", "-r", type=str, required=True, help="File path to csv file with player rankings.")
-@click.option(
-    "--file-path",
-    "-f",
-    type=str,
-    default=None,
-    help="File path to csv file with teams. If None, take the most recent team from data/league_night.",
-)
-def recompute(ranking_file_path: str, file_path: str | None) -> None:
+def _recompute(file_path: str | None, ranking_file_path: str, auto_yes_prompt: bool) -> None:
     if file_path is None:
         league_night_dir = os.path.join(os.path.dirname(__file__), "data", "league_night")
         all_league_night_csvs = os.listdir(league_night_dir)
@@ -109,8 +100,38 @@ def recompute(ranking_file_path: str, file_path: str | None) -> None:
         print(t)
 
     print("Overwrite the existing file with new data? If no, then the current scores are not saved.")
-    if prompt_yes_no():
+    if auto_yes_prompt or prompt_yes_no():
         write_teams_to_csv(file_path, teams)
+
+
+@click.group()
+def cli() -> None:
+    ...
+
+
+@cli.command("assign")
+@click.option(
+    "--file-path",
+    "-f",
+    type=str,
+    required=True,
+    help="File path to csv file with player rankings.",
+)
+def assign(file_path: str) -> None:
+    _assign(file_path, auto_yes_prompt=False)
+
+
+@cli.command("recompute")
+@click.option("--ranking-file-path", "-r", type=str, required=True, help="File path to csv file with player rankings.")
+@click.option(
+    "--file-path",
+    "-f",
+    type=str,
+    default=None,
+    help="File path to csv file with teams. If None, take the most recent team from data/league_night.",
+)
+def recompute(ranking_file_path: str, file_path: str | None) -> None:
+    _recompute(file_path, ranking_file_path, auto_yes_prompt=False)
 
 
 @cli.command("vis-scores")
@@ -123,8 +144,7 @@ def recompute(ranking_file_path: str, file_path: str | None) -> None:
 )
 def vis_scores(file_path: str) -> None:
     player_infos = load_data(file_path)
-    all_players = load_attendance("data/attendance.csv", player_infos)
-    primary_role_score_histogram(all_players.players)
+    role_score_histogram(player_infos.players)
 
 
 if __name__ == "__main__":

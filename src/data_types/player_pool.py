@@ -1,6 +1,6 @@
-from typing import List, Set
+from typing import Generic, List, Set, TypeVar
 
-from src.data_types.player import Player, PlayerRole
+from src.data_types.player import BaseName
 
 NAME_ALIASES: List[Set[str]] = [
     {"Matt", "Matthew", "Matt Wu"},
@@ -16,15 +16,18 @@ The actual name comparison is case- and whitespace-insensitive. I.e., 'Matt ', '
 same name.
 """
 
+NameT = TypeVar("NameT", bound=BaseName)
+OtherNameT = TypeVar("OtherNameT", bound=BaseName)
 
-class PlayerPool:
+
+class PlayerNamePool(Generic[NameT]):
     """A pool of players to assign to teams.
 
     In the 'pool', the lower-cased, whitespace-stripped name of the player is treated as the unique identifier. At a
     high level, the pool can be treated as a basic in-memory database of players, where we only index on name.
     """
 
-    def __init__(self, players: list[Player], name_aliases: list[set[str]] | None = None) -> None:
+    def __init__(self, players: list[NameT], name_aliases: list[set[str]] | None = None) -> None:
         self._name_aliases = name_aliases or NAME_ALIASES
 
         all_names = set([p.name for p in players])
@@ -34,7 +37,7 @@ class PlayerPool:
                 f"unique, case-insensitive names. All names were: {[p.name for p in players]}"
             )
         # Store players in a dict with lowercase names/whitespace stripped names as keys
-        self._name_to_players = {self._get_cleaned_key(p.name): p for p in players}
+        self._name_to_players: dict[str, NameT] = {self._get_cleaned_key(p.name): p for p in players}
         # All the names, NOT processed.
         self._all_names = [p.name for p in players]
 
@@ -48,14 +51,14 @@ class PlayerPool:
         return name.lower().strip()
 
     @property
-    def num_players(self) -> int:
+    def size(self) -> int:
         return len(self._name_to_players)
 
     @property
-    def players(self) -> list[Player]:
+    def players(self) -> list[NameT]:
         return list(self._name_to_players.values())
 
-    def get_player(self, name: str) -> Player:
+    def get_player(self, name: str) -> NameT:
         name_key = self._get_aliased_key(name)
         if name_key not in self._name_to_players:
             raise ValueError(
@@ -84,33 +87,38 @@ class PlayerPool:
                 return self._name_to_players[alias].name
         return name
 
-    def contains_player(self, name: str) -> bool:
+    def contains_name(self, name: str) -> bool:
         """Return True if the player pool contains a player with the given name."""
         name_key = self._get_aliased_key(name)
         return name_key in self._name_to_players
 
-    def contains_pool(self, other_pool: "PlayerPool") -> bool:
-        """Return True if this pool contains all players in the other pool."""
-        return all([self.contains_player(p.name) for p in other_pool.players])
+    def contains_pool(self, other_pool: "PlayerNamePool[OtherNameT]") -> bool:
+        """Return True if this pool contains all players (identified by name) in the other pool.
+
+        The specific type of the other pool is not checked.
+        """
+        return all([self.contains_name(p.name) for p in other_pool.players])
+
+    def are_players_equal(self, player1: BaseName, player2: BaseName) -> bool:
+        """Return True if the two players are the same."""
+        player1_key = self._get_aliased_key(player1.name)
+        player2_key = self._get_aliased_key(player2.name)
+        return player1_key == player2_key
 
     @classmethod
-    def filter(cls, player_pool: "PlayerPool", primary_roles: list[PlayerRole] | None = None) -> "PlayerPool":
-        """Return a new player pool containing only players with the given roles."""
-        players = [p for p in player_pool.players if primary_roles is None or p.primary_role in primary_roles]
-        return cls(players)
+    def add(cls, player_pool: "PlayerNamePool[NameT]", players: list[NameT]) -> "PlayerNamePool[NameT]":
+        """Return a new player pool with the given objects added.
 
-    @classmethod
-    def add(cls, player_pool: "PlayerPool", players: list[Player]) -> "PlayerPool":
-        """Return a new player pool with the given players added."""
+        The player list members must be the same type as the original player pool.
+        """
         new_players = player_pool.players + players
         return cls(new_players)
 
-    @classmethod
-    def remove_subset_from(cls, player_pool: "PlayerPool", players: list[Player]) -> "PlayerPool":
+    def remove_subset_from(self, subset_to_remove: list[NameT]) -> "PlayerNamePool[NameT]":
         """Return a new player pool with the given players removed."""
-        subset_to_remove = cls(players)
-        new_players = [p for p in player_pool.players if not subset_to_remove.contains_player(p.name)]
-        return cls(new_players)
+        pool_subset_to_remove = PlayerNamePool(subset_to_remove)
+        new_players = [p for p in self.players if not pool_subset_to_remove.contains_name(p.name)]
+        return PlayerNamePool(new_players)
 
     def __str__(self) -> str:
-        return f"PlayerPool({self.players})"
+        return f"PlayerNamePool({self.players})"

@@ -36,7 +36,7 @@ class WrongNumberOfPlayersException(Exception):
         num_roles_diff = abs(len(players) - expected_number)
 
         self.msg = (
-            f"For role {role.name}, there are {len(players)} player(s), but {expected_number} expected teams."
+            f"For role {role.name}, there are {len(players)} player(s), but {expected_number} expected teams. "
             f"{inclusion_set_msg}, and in total, we have: {', '.join(assignment_to_names(players))} player(s). "
             f"{overriden_assignments_msg}.\n"
         )
