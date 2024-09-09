@@ -16,6 +16,13 @@ class PlayerSamplingStrategy(enum.Enum):
 
 
 def get_players_for_role(player_pool: PlayerNamePool[PlayerAssignment], role: PlayerRole) -> List[PlayerAssignment]:
+    # Implement the idea that speed can play flex, but other roles should remain static
+    if role == PlayerRole.FLEX:
+        return [
+            p.player.to_assignment(role)
+            for p in player_pool.players
+            if p.assigned_role in {PlayerRole.FLEX, PlayerRole.SPEED}
+        ]
     return [p for p in player_pool.players if p.assigned_role == role]
 
 
@@ -68,5 +75,5 @@ def sample_players(
     elif player_sampling_strategy == PlayerSamplingStrategy.UNIFORM_SCORE:
         return _sample_players_uniform(all_players_for_role, num_required)
     elif player_sampling_strategy == PlayerSamplingStrategy.RANDOM:
-        return random.sample(all_players_for_role, num_required)
+        return random.sample(all_players_for_role, min(num_required, len(all_players_for_role)))
     raise NotImplementedError(f"No sampling strategy defined for enum: {player_sampling_strategy}")

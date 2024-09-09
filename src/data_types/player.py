@@ -50,6 +50,8 @@ class Player(BaseName):
     def weighted_score_for_role(cls, role: PlayerRole, score: float) -> float:
         if role == PlayerRole.QUEEN:
             weight = 0.275
+        elif role == PlayerRole.SPEED:
+            weight = 0.225
         elif role == PlayerRole.FLEX:
             weight = 0.1875
         elif role == PlayerRole.OBJECTIVE:

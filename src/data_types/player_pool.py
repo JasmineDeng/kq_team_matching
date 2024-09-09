@@ -51,7 +51,7 @@ class PlayerNamePool(Generic[NameT]):
         return name.lower().strip()
 
     @property
-    def num_players(self) -> int:
+    def size(self) -> int:
         return len(self._name_to_players)
 
     @property

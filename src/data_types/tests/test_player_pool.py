@@ -59,4 +59,4 @@ def test_player_pool_name_get_contains() -> None:
     assert curr_pool.contains_pool(new_pool)
     assert new_pool.contains_name("D")
     assert new_pool.contains_name("E")
-    assert new_pool.num_players == 2
+    assert new_pool.size == 2

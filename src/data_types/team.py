@@ -4,7 +4,7 @@ from collections import defaultdict
 from typing import Dict, List, NamedTuple, Optional, Tuple
 
 from src.data_types.player import Player, PlayerAssignment, PlayerRole
-from src.data_types.player_pool import PlayerPool
+from src.data_types.player_pool import PlayerNamePool
 
 
 class _SerializedTeamRow(NamedTuple):
@@ -37,12 +37,12 @@ class PlayerRoleMetadata(NamedTuple):
     """
 
 
-def roles_to_average_score(all_players: list[Player]) -> Dict[PlayerRole, float]:
+def roles_to_average_score(all_players: list[PlayerAssignment]) -> Dict[PlayerRole, float]:
     role_to_players: Dict[PlayerRole, List[float]] = {}
     for player in all_players:
-        if player.primary_role not in role_to_players:
-            role_to_players[player.primary_role] = []
-        role_to_players[player.primary_role].append(player.ranking[player.primary_role])
+        if player.assigned_role not in role_to_players:
+            role_to_players[player.assigned_role] = []
+        role_to_players[player.assigned_role].append(player.score)
     to_return = {key: sum(val) / len(val) for key, val in role_to_players.items()}
     return to_return
 
@@ -262,7 +262,7 @@ class Team:
         return to_return
 
     @classmethod
-    def from_csv(cls, csv_data: list[list[str]], player_pool: PlayerPool) -> "Team":
+    def from_csv(cls, csv_data: list[list[str]], player_pool: PlayerNamePool[Player]) -> "Team":
         name_to_role = {}
         name_to_score = {}
         name_to_weighted_score = {}
@@ -311,7 +311,7 @@ def write_teams_to_csv(output_file_name: str, teams: list[Team]) -> None:
             writer.writerow([])
 
 
-def read_teams_from_csv(csv_path: str, player_pool: PlayerPool) -> list[Team]:
+def read_teams_from_csv(csv_path: str, player_pool: PlayerNamePool[Player]) -> list[Team]:
     """Given a csv, load a list of teams."""
     teams = []
     with open(csv_path, "r") as f:
@@ -332,7 +332,7 @@ def read_teams_from_csv(csv_path: str, player_pool: PlayerPool) -> list[Team]:
                 deserialized_team = Team.from_csv(serialized_team, player_pool)
                 teams.append(deserialized_team)
 
-                player_pool = PlayerPool.remove_subset_from(player_pool, [p.player for p in deserialized_team.players])
+                player_pool = player_pool.remove_subset_from([p.player for p in deserialized_team.players])
                 serialized_team = []
 
                 row_count = 0

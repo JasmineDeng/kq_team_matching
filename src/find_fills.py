@@ -32,10 +32,8 @@ def find_fills(team: Team, all_players: list[PlayerAssignment], all_teams: List[
     for p in all_players:
         if p.name in team_names:
             continue
-        if p.assigned_role != PlayerRole.FLEX:
-            continue
-        # A player can fill if they are not on the team already, and are assigned the FLEX role.
-        possible_players.append(p)
+        # A player can fill if they are not on the team already.
+        possible_players.append(p.player.to_assignment(PlayerRole.FLEX))
 
     possible_players.sort(key=lambda p: abs(ideal_score - p.weighted_score))
     # arbitrary threshold, return at most 5 players

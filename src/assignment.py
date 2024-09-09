@@ -139,7 +139,6 @@ def _validate_required_roles(
         # 1. We require an exact count and the number of players is not equal to the number of teams.
         # 2. We don't require an exact count, but the role does not allow fills, and the number of players is less than
         #   the number of teams.
-        # TODO(jasminedeng): manually test this before merging.
         if not TeamComposition.is_num_assignments_valid(required_role, num_teams, len(total_assignments_for_role)):
             raise WrongNumberOfPlayersException(
                 expected_number=num_teams,
@@ -220,8 +219,9 @@ def _compute_ideal_score_for_group(
 
     The *actually* assigned player may differ from the ideal player once exclusion sets are accounted for.
     """
+    # TODO: put some logic into team composition obj
     possible_players_pre_exclusion = sorted(
-        get_players_for_role(players, role),
+        [p.player.to_assignment(role) for p in players.players],
         key=_sort_by_score_fn,
         reverse=True,
     )
@@ -267,7 +267,7 @@ def _assign_players_with_exclusion_set(
 
     Returns the set of players that were assigned, so they can be removed from further assignment consideration.
     """
-    if possible_players.num_players == 0:
+    if possible_players.size == 0:
         return []
 
     groups_to_assign = sorted(groups_to_assign, key=_sort_by_score_fn)
@@ -311,6 +311,8 @@ def _assign_players_with_exclusion_set(
             ideal_scores[exclude_group.group],
             to_exclude=exclude_group.to_exclude,
         )
+        # It may be None here if there are no players left to assign, or if there are too many exclusions
+        # to satisfy the constraint.
         if assignment is None:
             logger.debug(f"Skipping assignment for {exclude_group}, role {role}, ideal score {ideal_score}")
             continue
@@ -349,7 +351,9 @@ def assign_players_to_teams(
     use_uniform_sampling: bool = False,
 ) -> List[Team]:
     # Find the minimum number of teams required.
-    total_teams = math.ceil(player_pool.num_players / 5)
+    total_teams = math.ceil(player_pool.size / 5)
+    # Validate that all the roles that do not allow fills are satisfied.
+    _validate_required_roles(total_teams, player_pool, inclusion_set)
 
     # Get the averages per role
     role_averages = roles_to_average_score(player_pool.players)
@@ -359,9 +363,6 @@ def assign_players_to_teams(
         if excluded is not None:
             raise ValueError(f"Can't assign teams when inclusion set: {inclusion} violates exclusion set: {excluded}")
         player_pool = player_pool.remove_subset_from(inclusion)
-
-    # Validate that all the roles that do not allow fills are satisfied.
-    _validate_required_roles(total_teams, player_pool, inclusion_set)
 
     # Create the initial player groups, account for the inclusion set
     num_empty_teams = total_teams - len(inclusion_set)
@@ -385,7 +386,6 @@ def assign_players_to_teams(
         logger.debug(f"Assigning {player_role.name} for groups {groups_to_assign}")
 
         player_pool_to_assign = PlayerNamePool(get_players_for_role(player_pool, player_role))
-
         assigned_players = _assign_players_with_exclusion_set(
             groups_to_assign,
             groups_to_skip,
@@ -397,7 +397,7 @@ def assign_players_to_teams(
         )
         player_pool = player_pool.remove_subset_from(assigned_players)
 
-    if player_pool.num_players > 0:
+    if player_pool.size > 0:
         raise ValueError(f"Some people were not assigned! like: {[p.name for p in player_pool.players]}")
 
     teams = [Team(group.players) for group in player_groups]
