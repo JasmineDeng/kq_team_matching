@@ -221,7 +221,7 @@ def _compute_ideal_score_for_group(
     """
     # TODO: put some logic into team composition obj
     possible_players_pre_exclusion = sorted(
-        [p.player.to_assignment(role) for p in players.players],
+        get_players_for_role(players, role),
         key=_sort_by_score_fn,
         reverse=True,
     )
