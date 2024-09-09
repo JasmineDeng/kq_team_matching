@@ -107,6 +107,7 @@ def load_inclusion_set(csv_path: str, player_pool: PlayerNamePool[Player]) -> Li
 
     role_to_csv_title = {
         PlayerRole.QUEEN: "Queen",
+        PlayerRole.SPEED: "Speed Warrior",
         PlayerRole.OBJECTIVE: "Objective",
         PlayerRole.FLEX: "Flex",
     }

@@ -14,9 +14,10 @@ class PlayerRole(enum.Enum):
     'speed' refers to warrior type, and should be hand-selected. 'objective' refers to the objective runner.
     """
 
-    OBJECTIVE = 0
-    FLEX = 1
-    QUEEN = 3
+    OBJECTIVE = enum.auto()
+    FLEX = enum.auto()
+    QUEEN = enum.auto()
+    SPEED = enum.auto()
 
 
 class BaseName:
