@@ -219,7 +219,6 @@ def _compute_ideal_score_for_group(
 
     The *actually* assigned player may differ from the ideal player once exclusion sets are accounted for.
     """
-    # TODO: put some logic into team composition obj
     possible_players_pre_exclusion = sorted(
         get_players_for_role(players, role),
         key=_sort_by_score_fn,
