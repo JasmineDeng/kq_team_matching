@@ -41,7 +41,7 @@ def cli() -> None:
 )
 def assign(file_path: str) -> None:
     player_infos = load_data(file_path)
-    player_pool = load_attendance("data/attendance.csv", player_infos)
+    player_pool = load_attendance("data/attendance.csv", player_infos, scores_csv_path=file_path)
 
     inclusion_set = load_inclusion_set("data/inclusion_set.csv", player_infos)
     exclusion_set = load_exclusion_set("data/exclusion_set.csv", player_infos)

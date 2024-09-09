@@ -21,6 +21,7 @@ def load_data(csv_path: str) -> PlayerNamePool[Player]:
     column_name_to_role = {
         "queen rank": PlayerRole.QUEEN,
         "flex rank": PlayerRole.FLEX,
+        "speed rank": PlayerRole.SPEED,
         "objective rank": PlayerRole.OBJECTIVE,
     }
 
@@ -43,9 +44,32 @@ def load_data(csv_path: str) -> PlayerNamePool[Player]:
     return PlayerNamePool(all_players)
 
 
-def load_attendance(csv_path: str, player_pool: PlayerNamePool[Player]) -> PlayerNamePool[PlayerAssignment]:
+def _load_assigned_speed(csv_path: str, player_pool: PlayerNamePool[Player]) -> PlayerNamePool[Player]:
+    """Read the speed-assigned roles from the scores csv.
+
+    Currently assigned roles are split between the scores csv and attendance csv, so we need to read both.
+    In the future, we should auto-assign speed positions.
+
+    We *only* assign SPEED in the scores csv, so all other 'assigned' roles are ignored.
+    """
+    to_return = []
+    with open(csv_path, newline="") as csvfile:
+        reader = csv.DictReader(csvfile)
+        for row in reader:
+            assigned_role = PlayerRole[row["Primary Role"].upper()]
+            if assigned_role == PlayerRole.SPEED:
+                to_return.append(player_pool.get_player(row["name"]))
+    return PlayerNamePool(to_return)
+
+
+def load_attendance(
+    csv_path: str, player_pool: PlayerNamePool[Player], scores_csv_path: str | None = None
+) -> PlayerNamePool[PlayerAssignment]:
     """Given a csv, and all possible players with ranking data, return the players who are in attendance."""
     player_list = []
+    assigned_speed = None
+    if scores_csv_path:
+        assigned_speed = _load_assigned_speed(scores_csv_path, player_pool)
 
     with open(csv_path, newline="") as csvfile:
         reader = csv.reader(csvfile)
@@ -65,6 +89,8 @@ def load_attendance(csv_path: str, player_pool: PlayerNamePool[Player]) -> Playe
                 assigned_role = PlayerRole.QUEEN
             elif is_obj == "1":
                 assigned_role = PlayerRole.OBJECTIVE
+            elif assigned_speed is not None and assigned_speed.contains_name(name):
+                assigned_role = PlayerRole.SPEED
             else:
                 assigned_role = PlayerRole.FLEX
 
