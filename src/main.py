@@ -5,18 +5,17 @@ import click
 
 from src.assignment import assign_players_to_teams
 from src.cli_utils import prompt_yes_no
+from src.data_types.parseable_datetime import ParseableDatetime
 from src.data_types.team import TeamComposition, read_teams_from_csv, roles_to_average_score, write_teams_to_csv
 from src.find_fills import find_fills
 from src.load_data import load_attendance, load_data, load_exclusion_set, load_inclusion_set
 from src.visualization.scores import role_score_histogram
 
-DATETIME_FORMAT = "%Y-%m-%d_%H:%M:%S"
-
 
 def _parse_datetime(value: str) -> datetime.datetime | None:
     try:
         no_ext_filename = value.rsplit(".")[0]
-        return datetime.datetime.strptime(no_ext_filename, DATETIME_FORMAT)
+        return ParseableDatetime.deserialize(no_ext_filename).datetime_obj
     except Exception:
         return None
 
@@ -77,7 +76,7 @@ def _assign(
 
     print("Save the teams to a csv?")
     if auto_yes_prompt or prompt_yes_no():
-        date_str = datetime.datetime.now().strftime(DATETIME_FORMAT)
+        date_str = ParseableDatetime(datetime.datetime.now()).serialize()
         output_file_name = os.path.join(output_dir_to_use, "league_night", f"{date_str}.csv")
         write_teams_to_csv(output_file_name, teams)
         return output_file_name
