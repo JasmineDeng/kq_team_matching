@@ -27,12 +27,13 @@ def _assign(
 
     Returns the file path to the output csv file, if it was saved.
     """
+    default_dir = os.path.join(os.path.dirname(__file__), "data")
     if data_dir is None:
-        data_dir_to_use = os.path.join(os.path.dirname(__file__), "data")
+        data_dir_to_use = default_dir
         output_dir_to_use = data_dir_to_use
     else:
         data_dir_to_use = data_dir
-        output_dir_to_use = output_dir
+        output_dir_to_use = default_dir
 
     player_infos = load_data(file_path)
     player_pool = load_attendance(

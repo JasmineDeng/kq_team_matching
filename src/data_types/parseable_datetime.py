@@ -8,14 +8,14 @@ class ParseableDatetime:
         self._datetime_obj = datetime_obj
 
     @property
-    def datetime_obj(self):
+    def datetime_obj(self) -> datetime.datetime:
         return self._datetime_obj
 
-    def serialize(self):
+    def serialize(self) -> str:
         return self._datetime_obj.strftime(DATETIME_FORMAT)
 
     @classmethod
-    def deserialize(cls, date_str: str):
+    def deserialize(cls, date_str: str) -> "ParseableDatetime":
         try:
             datetime_obj = datetime.datetime.strptime(date_str, DATETIME_FORMAT)
             return cls(datetime_obj)
