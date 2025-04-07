@@ -35,3 +35,14 @@ by the timestamp in the filename under `data/league_night`). Note that when edit
 team assignment, the blank lines ",,,," denoting Phils are important and should not be deleted
 in the process of swapping players around. It is also important to preserve team composition, i.e.,
 a team must always have a Queen, an Objective, and a Speed player.
+
+## Visualizing scores
+
+Score distributions can be visualized in the `visualizations` directory, but require additionally
+installed matplotlib, which is not included in requirements.txt by default.
+
+For example, you can run the below command from the `visualizations` directory.
+
+```commandline
+python main.py vis-scores -f data/test_data.csv
+```

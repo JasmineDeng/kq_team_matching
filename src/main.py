@@ -9,7 +9,6 @@ from src.data_types.parseable_datetime import ParseableDatetime
 from src.data_types.team import TeamComposition, read_teams_from_csv, roles_to_average_score, write_teams_to_csv
 from src.find_fills import find_fills
 from src.load_data import load_attendance, load_data, load_exclusion_set, load_inclusion_set
-from src.visualization.scores import role_score_histogram
 
 
 def _parse_datetime(value: str) -> datetime.datetime | None:
@@ -132,19 +131,6 @@ def assign(file_path: str) -> None:
 )
 def recompute(ranking_file_path: str, file_path: str | None) -> None:
     _recompute(file_path, ranking_file_path, auto_yes_prompt=False)
-
-
-@cli.command("vis-scores")
-@click.option(
-    "--file-path",
-    "-f",
-    type=str,
-    required=True,
-    help="File path to csv file with player rankings.",
-)
-def vis_scores(file_path: str) -> None:
-    player_infos = load_data(file_path)
-    role_score_histogram(player_infos.players)
 
 
 if __name__ == "__main__":
