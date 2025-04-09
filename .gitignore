@@ -1,5 +1,7 @@
-kq_env
+kq_env*
 __pycache__
 .mypy_cache
 .idea
 .DS_Store
+*.iml
+src/data/

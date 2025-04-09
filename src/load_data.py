@@ -1,8 +1,10 @@
 import csv
+from datetime import datetime
 from typing import List
 
+from src.data_types.exclusion import Exclusion
 from src.data_types.player import Player, PlayerAssignment, PlayerRole
-from src.data_types.player_pool import PlayerPool
+from src.data_types.player_pool import PlayerNamePool
 from src.data_types.team import TeamComposition
 
 
@@ -15,7 +17,7 @@ def _try_to_float(value: str, default_value: int = 1) -> float:
         return default_value
 
 
-def load_data(csv_path: str, use_flex_role_for_speed: bool = False) -> PlayerPool:
+def load_data(csv_path: str) -> PlayerNamePool[Player]:
     column_name_to_role = {
         "queen rank": PlayerRole.QUEEN,
         "flex rank": PlayerRole.FLEX,
@@ -27,13 +29,7 @@ def load_data(csv_path: str, use_flex_role_for_speed: bool = False) -> PlayerPoo
     with open(csv_path, newline="") as csvfile:
         reader = csv.DictReader(csvfile)
         for row in reader:
-            # Create rankings
-            primary_role = PlayerRole[row["Primary Role"].upper()]
-
             ranking_dict = {role: row[key] for key, role in column_name_to_role.items()}
-
-            if use_flex_role_for_speed:
-                primary_role = PlayerRole.FLEX
 
             # convert values to floats
             float_ranking_dict = {key: _try_to_float(value) for key, value in ranking_dict.items()}
@@ -42,17 +38,39 @@ def load_data(csv_path: str, use_flex_role_for_speed: bool = False) -> PlayerPoo
 
             player = Player(
                 name=name,
-                primary_role=primary_role,
                 ranking=float_ranking_dict,
             )
             all_players.append(player)
 
-    return PlayerPool(all_players)
+    return PlayerNamePool(all_players)
 
 
-def load_attendance(csv_path: str, player_pool: PlayerPool) -> PlayerPool:
+def _load_assigned_speed(csv_path: str, player_pool: PlayerNamePool[Player]) -> PlayerNamePool[Player]:
+    """Read the speed-assigned roles from the scores csv.
+
+    Currently assigned roles are split between the scores csv and attendance csv, so we need to read both.
+    In the future, we should auto-assign speed positions.
+
+    We *only* assign SPEED in the scores csv, so all other 'assigned' roles are ignored.
+    """
+    to_return = []
+    with open(csv_path, newline="") as csvfile:
+        reader = csv.DictReader(csvfile)
+        for row in reader:
+            assigned_role = PlayerRole[row["Primary Role"].upper()]
+            if assigned_role == PlayerRole.SPEED:
+                to_return.append(player_pool.get_player(row["name"]))
+    return PlayerNamePool(to_return)
+
+
+def load_attendance(
+    csv_path: str, player_pool: PlayerNamePool[Player], scores_csv_path: str | None = None
+) -> PlayerNamePool[PlayerAssignment]:
     """Given a csv, and all possible players with ranking data, return the players who are in attendance."""
     player_list = []
+    assigned_speed = None
+    if scores_csv_path:
+        assigned_speed = _load_assigned_speed(scores_csv_path, player_pool)
 
     with open(csv_path, newline="") as csvfile:
         reader = csv.reader(csvfile)
@@ -69,36 +87,50 @@ def load_attendance(csv_path: str, player_pool: PlayerPool) -> PlayerPool:
             if is_queen == "1" and is_obj == "1":
                 raise ValueError(f"Player {current_player.name} cannot be both queen and obj, pick one")
             elif is_queen == "1":
-                current_player.primary_role = PlayerRole.QUEEN
+                assigned_role = PlayerRole.QUEEN
             elif is_obj == "1":
-                current_player.primary_role = PlayerRole.OBJECTIVE
-            elif current_player.primary_role == PlayerRole.QUEEN or current_player.primary_role == PlayerRole.OBJECTIVE:
-                print(
-                    f"Player {current_player.name} had role {current_player.primary_role} but those must be "
-                    f"hand-selected. Setting player to FLEX."
-                )
-                current_player.primary_role = PlayerRole.FLEX
+                assigned_role = PlayerRole.OBJECTIVE
+            elif assigned_speed is not None and assigned_speed.contains_name(name):
+                assigned_role = PlayerRole.SPEED
+            else:
+                assigned_role = PlayerRole.FLEX
 
-            player_list.append(current_player)
-    return PlayerPool(player_list)
+            player_list.append(current_player.to_assignment(assigned_role))
+    return PlayerNamePool(player_list)
 
 
-def load_exclusion_set(csv_path: str, player_pool: PlayerPool) -> list[PlayerPool]:
+def _str_to_bool(value: str) -> bool:
+    if value == "TRUE":
+        return True
+    if value == "FALSE":
+        return False
+    raise ValueError(f"Could not convert {value} to boolean, must be one of 'TRUE' or 'FALSE'")
+
+
+def load_exclusion_set(csv_path: str, player_pool: PlayerNamePool[Player]) -> list[Exclusion]:
     """Given a csv, load sets of people who should not play on the same team."""
     exclusion_set = []
     with open(csv_path, newline="") as csvfile:
         reader = csv.reader(csvfile)
         next(reader)  # skip the header
         for row in reader:
-            player1 = player_pool.get_player(row[0])
-            player2 = player_pool.get_player(row[1])
-            exclusion_set.append(PlayerPool([player1, player2]))
+            if len(row) > 3 and row[3] and datetime.strptime(row[3], "%Y-%m-%d") >= datetime.now():
+                continue
+
+            requestor = player_pool.get_player(row[0])
+            other_player = player_pool.get_player(row[1])
+
+            only_if_they_queen = False
+            if len(row) > 2:
+                only_if_they_queen = _str_to_bool(row[2])
+
+            exclusion_set.append(Exclusion(requestor, other_player, only_if_they_queen))
 
     return exclusion_set
 
 
 def load_inclusion_set(
-    csv_path: str, player_pool: PlayerPool, team_composition: type[TeamComposition]
+    csv_path: str, player_pool: PlayerNamePool[Player], team_composition: type[TeamComposition]
 ) -> List[List[PlayerAssignment]]:
     inclusion_set = []
 
@@ -109,7 +141,6 @@ def load_inclusion_set(
         PlayerRole.FLEX: "Flex",
     }
     role_to_ind = {}
-    team_composition_role_to_ind = {role: i for i, role in enumerate(team_composition.get_roles())}
     with open(csv_path, newline="") as csvfile:
         reader = csv.reader(csvfile)
         field_names = next(reader)
@@ -122,12 +153,9 @@ def load_inclusion_set(
                     name = row[ind]
                     if not name:
                         continue
+                    if not player_pool.contains_name(name):
+                        raise ValueError(f"Player {name} in inclusion set, but not found in player pool")
                     player = player_pool.get_player(name)
-                    if role != player.primary_role:
-                        print(
-                            f"Player {player.name} had primary role {player.primary_role.name} but because of "
-                            f"inclusion set, role is now: {role.name}"
-                        )
                     team.append(PlayerAssignment(player, assigned_role=role))
             if team:
                 team_composition.validate_team(team, allow_missing=True)
