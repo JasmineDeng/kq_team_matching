@@ -102,7 +102,7 @@ def _validate_required_roles(
     all_inclusion_set_names = assignment_to_names(sum(inclusion_set, []))
     checked_roles = set()
 
-    for required_role in team_composition.roles:
+    for required_role in team_composition.get_roles():
         if team_composition.role_allows_fill(required_role):
             continue
 
@@ -257,6 +257,7 @@ def _compute_ideal_score_for_group(
 
 
 def _assign_players_with_exclusion_set(
+    *,
     groups_to_assign: List[_PlayerGroup],
     groups_to_skip: List[_PlayerGroup],
     possible_players: PlayerNamePool[PlayerAssignment],
@@ -365,12 +366,13 @@ def assign_players_to_teams(
     team_composition: type[TeamComposition],
     exclusion_set: list[Exclusion],
     use_uniform_sampling: bool = False,
-    use_flex_role_for_speed: bool = False,
 ) -> List[Team]:
     # Find the minimum number of teams required.
     total_teams = math.ceil(player_pool.size / 5)
     # Validate that all the roles that do not allow fills are satisfied.
-    _validate_required_roles(total_teams, player_pool, inclusion_set, team_composition=team_composition)
+    _validate_required_roles(
+        num_teams=total_teams, all_players=player_pool, inclusion_set=inclusion_set, team_composition=team_composition
+    )
 
     # Get the averages per role
     role_averages = roles_to_average_score(player_pool.players)
@@ -404,15 +406,16 @@ def assign_players_to_teams(
 
         player_pool_to_assign = PlayerNamePool(get_players_for_role(player_pool, player_role))
         assigned_players = _assign_players_with_exclusion_set(
-            groups_to_assign,
-            groups_to_skip,
-            player_pool_to_assign,
-            player_role,
-            exclusion_set,
-            role_averages,
-            use_uniform_sampling,
-            team_composition,
+            groups_to_assign=groups_to_assign,
+            groups_to_skip=groups_to_skip,
+            possible_players=player_pool_to_assign,
+            role=player_role,
+            exclusion_set=exclusion_set,
+            role_averages=role_averages,
+            use_uniform_sampling=use_uniform_sampling,
+            team_composition=team_composition,
         )
+        print(assigned_players)
         player_pool = player_pool.remove_subset_from(assigned_players)
 
     if player_pool.size > 0:

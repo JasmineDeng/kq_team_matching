@@ -6,6 +6,7 @@ import click
 from src.assignment import assign_players_to_teams
 from src.cli_utils import prompt_yes_no
 from src.data_types.parseable_datetime import ParseableDatetime
+from src.data_types.player import PlayerRole
 from src.data_types.team import (
     SpeedTeamComposition,
     ThreeFlexTeamComposition,
@@ -37,26 +38,32 @@ def _assign(
     Returns the file path to the output csv file, if it was saved.
     """
     default_dir = os.path.join(os.path.dirname(__file__), "data")
-    if data_dir is None:
-        data_dir_to_use = default_dir
-        output_dir_to_use = data_dir_to_use
-    else:
-        data_dir_to_use = data_dir
-        output_dir_to_use = default_dir
-
-    player_infos = load_data(file_path, use_flex_role_for_speed=use_flex_role_for_speed)
-    player_pool = load_attendance("data/attendance.csv", player_infos)
+    data_dir_to_use = default_dir if data_dir is None else data_dir
+    output_dir_to_use = default_dir if output_dir is None else output_dir
 
     team_composition = ThreeFlexTeamComposition if use_flex_role_for_speed else SpeedTeamComposition
+    assign_speed = PlayerRole.SPEED in team_composition.get_roles()
+    print(f"Using team composition: {team_composition.__name__}, assign_speed={assign_speed}")
+
     player_infos = load_data(file_path)
     player_pool = load_attendance(
-        os.path.join(data_dir_to_use, "attendance.csv"), player_infos, scores_csv_path=file_path
+        os.path.join(data_dir_to_use, "attendance.csv"),
+        player_infos,
+        assign_speed=assign_speed,
+        scores_csv_path=file_path,
     )
 
-    inclusion_set = load_inclusion_set(os.path.join(data_dir_to_use, "inclusion_set.csv"), player_infos)
+    inclusion_set = load_inclusion_set(
+        os.path.join(data_dir_to_use, "inclusion_set.csv"), player_pool, team_composition
+    )
     exclusion_set = load_exclusion_set(os.path.join(data_dir_to_use, "exclusion_set.csv"), player_infos)
     print(f"Loaded exclusion set: {', '.join([str(e) for e in exclusion_set])}")
-    teams = assign_players_to_teams(player_pool, inclusion_set, exclusion_set, team_composition)
+    teams = assign_players_to_teams(
+        player_pool=player_pool,
+        inclusion_set=inclusion_set,
+        exclusion_set=exclusion_set,
+        team_composition=team_composition,
+    )
     teams = sorted(teams, key=lambda t: t.total_score)
     for t in teams:
         print(t)
@@ -77,7 +84,7 @@ def _assign(
 
     for t in teams:
         if t.needs_fill:
-            possible_fills = find_fills(t, player_pool.players, teams, team_composition=team_composition)
+            possible_fills = find_fills(t, player_pool.players, teams, team_composition)
             print(f"For team {t.team_name}, possible fills: {possible_fills}")
             subsample = possible_fills[:2]
             print(f"Randomly chosen two fills: {subsample}")
@@ -130,15 +137,8 @@ def cli() -> None:
     required=True,
     help="File path to csv file with player rankings.",
 )
-@click.option(
-    "--use-flex-role-for-speed",
-    "-s",
-    is_flag=True,
-    default=False,
-    help="If True, ignore the speed role and instead take the top NUM_TEAMS flex players.",
-)
-def assign(file_path: str, use_flex_role_for_speed: bool) -> None:
-    _assign(file_path, auto_yes_prompt=False, use_flex_role_for_speed=use_flex_role_for_speed)
+def assign(file_path: str) -> None:
+    _assign(file_path, auto_yes_prompt=False)
 
 
 @cli.command("recompute")

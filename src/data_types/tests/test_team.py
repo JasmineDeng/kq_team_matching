@@ -6,7 +6,7 @@ import pytest
 
 from src.data_types.player import Player, PlayerAssignment, PlayerRole
 from src.data_types.player_pool import PlayerNamePool
-from src.data_types.team import Team, TeamComposition, read_teams_from_csv, write_teams_to_csv
+from src.data_types.team import SpeedTeamComposition, Team, TeamComposition, read_teams_from_csv, write_teams_to_csv
 from src.data_types.tests.mock_data import get_fake_ranking, get_player_assignments
 
 
@@ -56,36 +56,40 @@ def _get_team_list() -> list[list[Team]]:
     ]
 
 
-def test_team_composition() -> None:
+def test_three_flex_team_composition() -> None:
+    assert 1 == 0, "need to implement this test"
+
+
+def test_speed_team_composition() -> None:
     team = get_player_assignments(["A", "B", "C"], [PlayerRole.QUEEN, PlayerRole.FLEX, PlayerRole.FLEX])
     with pytest.raises(ValueError):
-        TeamComposition.validate_team(team)
+        SpeedTeamComposition.validate_team(team)
     team.append(
         Player("D", ranking=get_fake_ranking()).to_assignment(PlayerRole.FLEX),
     )
     with pytest.raises(ValueError):
-        TeamComposition.validate_team(team)
+        SpeedTeamComposition.validate_team(team)
     team = get_player_assignments(["A", "B"], [PlayerRole.QUEEN, PlayerRole.QUEEN])
     with pytest.raises(ValueError):
-        TeamComposition.validate_team(team)
+        SpeedTeamComposition.validate_team(team)
 
     team = get_player_assignments(
         ["A", "B", "C", "D"], [PlayerRole.QUEEN, PlayerRole.FLEX, PlayerRole.FLEX, PlayerRole.SPEED]
     )
     with pytest.raises(ValueError):
-        TeamComposition.validate_team(team)
+        SpeedTeamComposition.validate_team(team)
     # Now this should succeed since we allow flex fills
     team = get_player_assignments(
         ["A", "B", "C", "D"], [PlayerRole.QUEEN, PlayerRole.FLEX, PlayerRole.OBJECTIVE, PlayerRole.SPEED]
     )
-    TeamComposition.validate_team(team)
+    SpeedTeamComposition.validate_team(team)
     # And if we add the final FLEX player
     team.append(Player("E", ranking=get_fake_ranking()).to_assignment(PlayerRole.FLEX))
-    TeamComposition.validate_team(team)
+    SpeedTeamComposition.validate_team(team)
     # And if we add one more, it is now too many players
     team.append(Player("F", ranking=get_fake_ranking()).to_assignment(PlayerRole.FLEX))
     with pytest.raises(ValueError):
-        TeamComposition.validate_team(team)
+        SpeedTeamComposition.validate_team(team)
 
 
 def test_remaining_roles_remaining() -> None:
