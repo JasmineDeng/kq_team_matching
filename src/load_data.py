@@ -147,7 +147,8 @@ def load_inclusion_set(
                 if not name:
                     continue
                 if not player_pool.contains_name(name):
-                    raise ValueError(f"Player {name} in inclusion set, but not found in player pool")
+                    print(f"Player {name} in inclusion set, but not found in player pool, skipping loading inclusion")
+                    continue
                 player = player_pool.get_player(name)
                 team.append(player)
             if team:
