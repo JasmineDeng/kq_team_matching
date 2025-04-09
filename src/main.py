@@ -137,8 +137,14 @@ def cli() -> None:
     required=True,
     help="File path to csv file with player rankings.",
 )
-def assign(file_path: str) -> None:
-    _assign(file_path, auto_yes_prompt=False)
+@click.option(
+    "--use-flex-role-for-speed",
+    is_flag=True,
+    default=False,
+    help="If true, do not use speed assignments and instead use flex role.",
+)
+def assign(file_path: str, use_flex_role_for_speed: bool) -> None:
+    _assign(file_path, auto_yes_prompt=False, use_flex_role_for_speed=use_flex_role_for_speed)
 
 
 @cli.command("recompute")

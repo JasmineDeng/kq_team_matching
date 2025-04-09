@@ -201,6 +201,7 @@ def _get_player_for_ideal_score(
     player_assignments: List[PlayerAssignment],
     ideal_score: float,
     to_exclude: Optional[Set[str]] = None,
+    include_randomness: bool = False,
 ) -> Optional[PlayerAssignment]:
     """Get a player with the given role, not in the exclusion set, with a score as close as possible to the ideal."""
     if to_exclude is not None:
@@ -209,6 +210,15 @@ def _get_player_for_ideal_score(
         players_minus_exclusion = player_assignments
     # Get as close to the ideal score as possible
     sorted_players = sorted(players_minus_exclusion, key=lambda p: abs(ideal_score - p.weighted_score))
+    # Weighted sampling
+    if include_randomness:
+        # The higher the weight, the more likely it is to be chosen, so we want to use the negative of the distance
+        # from the ideal score.
+        weights = [-abs(ideal_score - p.weighted_score) for p in sorted_players]
+        # Make sure all the weights are positive. All elements should be negative since we invert the absolute value.
+        min_weight = min(weights)
+        weights = [weight + abs(min_weight) for weight in weights]
+        sorted_players = random.choices(sorted_players, weights=weights, k=1)
     logger.debug([abs(ideal_score - p.weighted_score) for p in sorted_players])
     if len(sorted_players) == 0:
         return None
@@ -325,6 +335,7 @@ def _assign_players_with_exclusion_set(
             get_players_for_role(possible_players, role),
             ideal_scores[exclude_group.group],
             to_exclude=exclude_group.to_exclude,
+            include_randomness=True,
         )
         # It may be None here if there are no players left to assign, or if there are too many exclusions
         # to satisfy the constraint.
