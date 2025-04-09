@@ -18,6 +18,7 @@ def test_e2e(tmpdir: py.path.local, use_flex_role_for_speed: bool) -> None:
         output_dir=tmpdir,
         use_flex_role_for_speed=use_flex_role_for_speed,
     )
+    assert output_file_path is not None
     assert os.path.exists(output_file_path)
     _recompute(output_file_path, os.path.join(TEST_DATA_DIR, "mock_scores.csv"), auto_yes_prompt=True)
     assert os.path.exists(output_file_path)
