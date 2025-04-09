@@ -116,6 +116,10 @@ def _validate_required_roles(
                     assignments.append(p)
                 # Find players where they had the required role in the overall assignments, but a
                 # different role in the inclusion set.
+                if not all_players.contains_name(p.name):
+                    raise ValueError(
+                        f"Player {p.name} in inclusion set is not in players loaded from the attendance file."
+                    )
                 overall_assignment = all_players.get_player(p.name)
                 if (
                     overall_assignment.assigned_role == required_role

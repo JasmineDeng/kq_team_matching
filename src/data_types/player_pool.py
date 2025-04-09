@@ -1,3 +1,4 @@
+from collections import defaultdict
 from typing import Generic, List, Set, TypeVar
 
 from src.data_types.player import BaseName
@@ -32,9 +33,14 @@ class PlayerNamePool(Generic[NameT]):
 
         all_names = set([p.name for p in players])
         if len(all_names) != len(players):
+            name_counts = defaultdict(int)
+            for p in players:
+                name_counts[p.name] += 1
+            duplicate_names = [name for name, count in name_counts.items() if count > 1]
+
             raise ValueError(
                 f"Duplicate player names found in player pool. Had {len(players)} players, but only {len(all_names)} "
-                f"unique, case-insensitive names. All names were: {[p.name for p in players]}"
+                f"unique, case-insensitive names. Duplicates are: {','.join(duplicate_names)}"
             )
         # Store players in a dict with lowercase names/whitespace stripped names as keys
         self._name_to_players: dict[str, NameT] = {self._get_cleaned_key(p.name): p for p in players}
