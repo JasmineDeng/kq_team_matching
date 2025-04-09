@@ -150,6 +150,8 @@ def load_inclusion_set(csv_path: str, player_pool: PlayerNamePool[Player]) -> Li
                     name = row[ind]
                     if not name:
                         continue
+                    if not player_pool.contains_name(name):
+                        raise ValueError(f"Player {name} in inclusion set, but not found in player pool")
                     player = player_pool.get_player(name)
                     team.append(PlayerAssignment(player, assigned_role=role))
             if team:
