@@ -210,6 +210,15 @@ def _get_player_for_ideal_score(
         players_minus_exclusion = player_assignments
     # Get as close to the ideal score as possible
     sorted_players = sorted(players_minus_exclusion, key=lambda p: abs(ideal_score - p.weighted_score))
+
+    # If no players are found, return None
+    if not sorted_players:
+        return None
+
+    # If there is only one player, return that player and don't bother with randomness
+    if len(sorted_players) == 1:
+        return sorted_players[0]
+
     # Weighted sampling
     if include_randomness:
         # The higher the weight, the more likely it is to be chosen, so we want to use the negative of the distance
@@ -428,7 +437,6 @@ def assign_players_to_teams(
             use_uniform_sampling=use_uniform_sampling,
             team_composition=team_composition,
         )
-        print(assigned_players)
         player_pool = player_pool.remove_subset_from(assigned_players)
 
     if player_pool.size > 0:
