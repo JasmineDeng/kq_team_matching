@@ -217,8 +217,10 @@ def _get_player_for_ideal_score(
         weights = [-abs(ideal_score - p.weighted_score) for p in sorted_players]
         # Make sure all the weights are positive. All elements should be negative since we invert the absolute value.
         min_weight = min(weights)
-        weights = [weight + abs(min_weight) for weight in weights]
-        sorted_players = random.choices(sorted_players, weights=weights, k=1)
+        # Add a small offset to ensure weights don't sum to zero.
+        offset = 0.1
+        adjusted_weights = [weight + abs(min_weight) + offset for weight in weights]
+        sorted_players = random.choices(sorted_players, weights=adjusted_weights, k=1)
     logger.debug([abs(ideal_score - p.weighted_score) for p in sorted_players])
     if len(sorted_players) == 0:
         return None

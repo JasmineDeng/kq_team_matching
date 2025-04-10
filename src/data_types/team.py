@@ -116,15 +116,17 @@ class TeamComposition:
 
     @classmethod
     def validate_team(cls, team: List[PlayerAssignment], allow_missing: bool = False) -> None:
-        role_counts = {role: count for role, count in cls.role_counts()}
+        expected_role_counts = {role: 0 for role in PlayerRole}
+        for role in cls.get_roles():
+            expected_role_counts[role] += 1
 
         # The team counts are the current counts, role_counts is what it should be.
-        team_counts: Dict[PlayerRole, float] = defaultdict(int)
+        actual_role_counts = {role: 0 for role in PlayerRole}
         for player in team:
-            team_counts[player.assigned_role] += 1
+            actual_role_counts[player.assigned_role] += 1
         # If diff > 0, then the team has extra players, otherwise they are missing a player.
         team_player_diff: Dict[PlayerRole, float] = {
-            role: team_counts[role] - role_counts.get(role, 0) for role in team_counts
+            role: actual_role_counts[role] - expected_role_counts[role] for role in PlayerRole
         }
         err_str = ""
         for role, diff in team_player_diff.items():
@@ -132,9 +134,7 @@ class TeamComposition:
                 continue
             allows_fill = cls.role_allows_fill(role)
             if (not allows_fill and diff != 0) or (allows_fill and diff > 0):
-                err_str += (
-                    f"Should have had {role_counts.get(role, 0)} players {role.name} but got {team_counts[role]}!\n"
-                )
+                err_str += f"Should have had {expected_role_counts[role]} players {role.name} but got {actual_role_counts[role]}!\n"
         if err_str:
             err_str += f"Team players: {[p.player.name for p in team]}"
             raise ValueError(err_str)
@@ -316,6 +316,7 @@ class Team:
 
         ordered_names = []
         for i, row in enumerate(csv_data):
+            # Assume that the metadata row is the last one.
             if i == len(csv_data) - 1:
                 # This is the metadata row, so get the team composition name. We assume the last row
                 # is always metadata row.
@@ -324,7 +325,10 @@ class Team:
                 continue
 
             team_row = _SerializedTeamRow(*row)
-            # Assume that the metadata row is the last one.
+
+            if not team_row.name:
+                # This is a fill player, so we can skip it.
+                continue
 
             name_to_role[team_row.name] = PlayerRole[team_row.role]
             name_to_score[team_row.name] = float(team_row.score)

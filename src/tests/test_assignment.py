@@ -6,7 +6,7 @@ from src.assignment import _contains_exclusion_set, _validate_required_roles, as
 from src.data_types.exclusion import Exclusion
 from src.data_types.player import Player, PlayerAssignment, PlayerRole
 from src.data_types.player_pool import PlayerNamePool
-from src.data_types.team import Team
+from src.data_types.team import SpeedTeamComposition, Team, TeamComposition, ThreeFlexTeamComposition
 from src.exceptions import WrongNumberOfPlayersException, assignment_to_names
 
 
@@ -30,17 +30,10 @@ def _name_list_to_exclusions(names: list[list[str]], all_assignments: list[Playe
     return result
 
 
-def _make_full_team(names: list[str]) -> Team:
+def _make_full_team(names: list[str], team_composition: type[TeamComposition]) -> Team:
     assert len(names) == 5, "Only full teams are supported"
-    return Team(
-        players=[
-            _player_one_role(names[0], PlayerRole.QUEEN, 1),
-            _player_one_role(names[1], PlayerRole.SPEED, 1),
-            _player_one_role(names[2], PlayerRole.OBJECTIVE, 1),
-            _player_one_role(names[3], PlayerRole.FLEX, 1),
-            _player_one_role(names[4], PlayerRole.FLEX, 1),
-        ],
-    )
+    players = [_player_one_role(names[i], role, ranking=i + 1) for i, role in enumerate(team_composition.get_roles())]
+    return Team(players, team_composition=team_composition)
 
 
 def test_contains_exclusion_set() -> None:
@@ -224,38 +217,46 @@ def test_inclusion_set() -> None:
     assert "C" in team_player_names and "B" in team_player_names
 
 
-def test_validate_required_roles() -> None:
-    team1 = _make_full_team(["A", "B", "C", "D", "E"])
-    team2 = _make_full_team(["F", "G", "H", "I", "J"])
-    team3 = _make_full_team(["K", "L", "M", "N", "O"])
+@pytest.mark.parametrize("team_composition", [SpeedTeamComposition, ThreeFlexTeamComposition])
+def test_validate_required_roles(team_composition: type[TeamComposition]) -> None:
+    team1 = _make_full_team(["A", "B", "C", "D", "E"], team_composition)
+    team2 = _make_full_team(["F", "G", "H", "I", "J"], team_composition)
+    team3 = _make_full_team(["K", "L", "M", "N", "O"], team_composition)
 
     total_team_num = 3
 
     all_assignments = team1.players + team2.players + team3.players
     player_pool_assignments = PlayerNamePool(all_assignments)
 
-    # This should succeed without any includion set.
-    _validate_required_roles(total_team_num, player_pool_assignments, [])
+    # This should succeed without any inclusion set.
+    _validate_required_roles(
+        num_teams=total_team_num,
+        all_players=player_pool_assignments,
+        inclusion_set=[],
+        team_composition=team_composition,
+    )
 
     # This should succeed because the overall counts are correct
     _validate_required_roles(
-        total_team_num,
-        player_pool_assignments,
-        [
+        num_teams=total_team_num,
+        all_players=player_pool_assignments,
+        inclusion_set=[
             [team1.queen_or_raise(), team2.speed_or_raise()],
             [team2.queen_or_raise(), team3.objective_or_raise()],
         ],
+        team_composition=team_composition,
     )
 
     # This will not pass because now we are missing obj.
     team2_obj = team2.objective_or_raise().player
     try:
         _validate_required_roles(
-            total_team_num,
-            player_pool_assignments,
-            [
+            num_teams=total_team_num,
+            all_players=player_pool_assignments,
+            inclusion_set=[
                 [team1.queen_or_raise(), PlayerAssignment(team2_obj, PlayerRole.SPEED)],
             ],
+            team_composition=team_composition,
         )
     except WrongNumberOfPlayersException as e:
         # Obj will error instead of speed because we allow extra speed roles.
