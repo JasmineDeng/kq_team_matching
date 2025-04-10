@@ -4,12 +4,14 @@ from src.data_types.player import PlayerAssignment, PlayerRole
 from src.data_types.team import Team, TeamComposition, roles_to_average_score
 
 
-def find_fills(team: Team, all_players: list[PlayerAssignment], all_teams: List[Team]) -> List[PlayerAssignment]:
+def find_fills(
+    team: Team, all_players: list[PlayerAssignment], all_teams: List[Team], team_composition: type[TeamComposition]
+) -> List[PlayerAssignment]:
     """Find a fill, where we're aiming to hit the average score of finalized teams.
 
     We always assume that the fill is a FLEX player.
     """
-    remaining_roles = TeamComposition.remaining_roles_required(team.players)
+    remaining_roles = team_composition.remaining_roles_required(team.players)
     if len(remaining_roles) == 0:
         print(f"No fills needed for team {team.team_name}")
         return []

@@ -33,7 +33,7 @@ class PlayerNamePool(Generic[NameT]):
 
         all_names = set([p.name for p in players])
         if len(all_names) != len(players):
-            name_counts = defaultdict(int)
+            name_counts: dict[str, int] = defaultdict(int)
             for p in players:
                 name_counts[p.name] += 1
             duplicate_names = [name for name, count in name_counts.items() if count > 1]

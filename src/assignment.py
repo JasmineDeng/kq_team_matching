@@ -17,12 +17,18 @@ logger = logging.getLogger(__name__)
 
 
 class _PlayerGroup(BasePlayerAssignment):
-    def __init__(self, players: List[PlayerAssignment], role_averages: Dict[PlayerRole, float]) -> None:
+    def __init__(
+        self,
+        players: List[PlayerAssignment],
+        team_composition: type[TeamComposition],
+        role_averages: Dict[PlayerRole, float],
+    ) -> None:
         # Use a list for the players because order *does* matter. If there are too many queens, for ex., a team
         # could have multiple queens, but we assign queens *first* so the first queen in the list should be the
         # team's queen.
         self.players = players
         self._role_averages = role_averages
+        self._team_composition = team_composition
 
     @property
     def score(self) -> float:
@@ -30,7 +36,7 @@ class _PlayerGroup(BasePlayerAssignment):
         # onto the team
         existing_score = sum(p.score for p in self.players)
         average_scores = sum(
-            self._role_averages[role] for role in TeamComposition.remaining_roles_required(self.players)
+            self._role_averages[role] for role in self._team_composition.remaining_roles_required(self.players)
         )
         return existing_score + average_scores
 
@@ -41,12 +47,12 @@ class _PlayerGroup(BasePlayerAssignment):
         existing_score = sum(p.weighted_score for p in self.players)
         average_scores = sum(
             Player.weighted_score_for_role(role, self._role_averages[role])
-            for role in TeamComposition.remaining_roles_required(self.players)
+            for role in self._team_composition.remaining_roles_required(self.players)
         )
         return round(existing_score + average_scores, 3)
 
     def weighted_score_excluding_role(self, role: PlayerRole) -> float:
-        remaining_roles_required = TeamComposition.remaining_roles_required(self.players)
+        remaining_roles_required = self._team_composition.remaining_roles_required(self.players)
         if role not in remaining_roles_required:
             raise ValueError(
                 f"Cannot exclude role in score calculation for role that is needed on the team anymore,"
@@ -82,7 +88,11 @@ def _sort_by_score_fn(assigned_player: BasePlayerAssignment) -> Tuple[float, flo
 
 
 def _validate_required_roles(
-    num_teams: int, all_players: PlayerNamePool[PlayerAssignment], inclusion_set: list[list[PlayerAssignment]]
+    *,
+    num_teams: int,
+    all_players: PlayerNamePool[PlayerAssignment],
+    inclusion_set: list[list[PlayerAssignment]],
+    team_composition: type[TeamComposition],
 ) -> None:
     """Validate that for each role that does not allow fills, we have enough players.
 
@@ -92,8 +102,8 @@ def _validate_required_roles(
     all_inclusion_set_names = assignment_to_names(sum(inclusion_set, []))
     checked_roles = set()
 
-    for required_role in TeamComposition.roles:
-        if TeamComposition.role_allows_fill(required_role):
+    for required_role in team_composition.get_roles():
+        if team_composition.role_allows_fill(required_role):
             continue
 
         if required_role in checked_roles:
@@ -143,7 +153,7 @@ def _validate_required_roles(
         # 1. We require an exact count and the number of players is not equal to the number of teams.
         # 2. We don't require an exact count, but the role does not allow fills, and the number of players is less than
         #   the number of teams.
-        if not TeamComposition.is_num_assignments_valid(required_role, num_teams, len(total_assignments_for_role)):
+        if not team_composition.is_num_assignments_valid(required_role, num_teams, len(total_assignments_for_role)):
             raise WrongNumberOfPlayersException(
                 expected_number=num_teams,
                 role=required_role,
@@ -191,6 +201,7 @@ def _get_player_for_ideal_score(
     player_assignments: List[PlayerAssignment],
     ideal_score: float,
     to_exclude: Optional[Set[str]] = None,
+    include_randomness: bool = False,
 ) -> Optional[PlayerAssignment]:
     """Get a player with the given role, not in the exclusion set, with a score as close as possible to the ideal."""
     if to_exclude is not None:
@@ -199,6 +210,26 @@ def _get_player_for_ideal_score(
         players_minus_exclusion = player_assignments
     # Get as close to the ideal score as possible
     sorted_players = sorted(players_minus_exclusion, key=lambda p: abs(ideal_score - p.weighted_score))
+
+    # If no players are found, return None
+    if not sorted_players:
+        return None
+
+    # If there is only one player, return that player and don't bother with randomness
+    if len(sorted_players) == 1:
+        return sorted_players[0]
+
+    # Weighted sampling
+    if include_randomness:
+        # The higher the weight, the more likely it is to be chosen, so we want to use the negative of the distance
+        # from the ideal score.
+        weights = [-abs(ideal_score - p.weighted_score) for p in sorted_players]
+        # Make sure all the weights are positive. All elements should be negative since we invert the absolute value.
+        min_weight = min(weights)
+        # Add a small offset to ensure weights don't sum to zero.
+        offset = 0.1
+        adjusted_weights = [weight + abs(min_weight) + offset for weight in weights]
+        sorted_players = random.choices(sorted_players, weights=adjusted_weights, k=1)
     logger.debug([abs(ideal_score - p.weighted_score) for p in sorted_players])
     if len(sorted_players) == 0:
         return None
@@ -247,6 +278,7 @@ def _compute_ideal_score_for_group(
 
 
 def _assign_players_with_exclusion_set(
+    *,
     groups_to_assign: List[_PlayerGroup],
     groups_to_skip: List[_PlayerGroup],
     possible_players: PlayerNamePool[PlayerAssignment],
@@ -254,6 +286,7 @@ def _assign_players_with_exclusion_set(
     exclusion_set: list[Exclusion],
     role_averages: Dict[PlayerRole, float],
     use_uniform_sampling: bool,
+    team_composition: type[TeamComposition],
 ) -> List[PlayerAssignment]:
     """Assign players to teams, accounting for the exclusion set.
 
@@ -300,7 +333,7 @@ def _assign_players_with_exclusion_set(
         groups_to_skip,
         possible_players,
         role,
-        TeamComposition.weighted_score_for_ranking(role_averages),
+        team_composition.weighted_score_for_ranking(role_averages),
     )
     if ideal_scores is None:
         raise ValueError(
@@ -313,6 +346,7 @@ def _assign_players_with_exclusion_set(
             get_players_for_role(possible_players, role),
             ideal_scores[exclude_group.group],
             to_exclude=exclude_group.to_exclude,
+            include_randomness=True,
         )
         # It may be None here if there are no players left to assign, or if there are too many exclusions
         # to satisfy the constraint.
@@ -348,15 +382,19 @@ def _assign_players_with_exclusion_set(
 
 
 def assign_players_to_teams(
+    *,
     player_pool: PlayerNamePool[PlayerAssignment],
     inclusion_set: List[List[PlayerAssignment]],
+    team_composition: type[TeamComposition],
     exclusion_set: list[Exclusion],
     use_uniform_sampling: bool = False,
 ) -> List[Team]:
     # Find the minimum number of teams required.
     total_teams = math.ceil(player_pool.size / 5)
     # Validate that all the roles that do not allow fills are satisfied.
-    _validate_required_roles(total_teams, player_pool, inclusion_set)
+    _validate_required_roles(
+        num_teams=total_teams, all_players=player_pool, inclusion_set=inclusion_set, team_composition=team_composition
+    )
 
     # Get the averages per role
     role_averages = roles_to_average_score(player_pool.players)
@@ -369,39 +407,40 @@ def assign_players_to_teams(
 
     # Create the initial player groups, account for the inclusion set
     num_empty_teams = total_teams - len(inclusion_set)
-    player_groups = [_PlayerGroup(inclusion, role_averages) for inclusion in inclusion_set] + [
-        _PlayerGroup([], role_averages) for _ in range(num_empty_teams)
+    player_groups = [_PlayerGroup(inclusion, team_composition, role_averages) for inclusion in inclusion_set] + [
+        _PlayerGroup([], team_composition, role_averages) for _ in range(num_empty_teams)
     ]
 
-    for player_role in TeamComposition.roles:
+    for player_role in team_composition.get_roles():
         # Some groups, because of the inclusion set, will already have a player assigned for this role.
         # In that case, we should skip it and not assign another player.
         groups_to_skip = [
             group
             for group in player_groups
-            if player_role not in TeamComposition.remaining_roles_required(group.players)
+            if player_role not in team_composition.remaining_roles_required(group.players)
         ]
         logger.debug(f"Assigning {player_role.name}, skipping groups: {groups_to_skip}")
         # Then remove them from the player group list
         groups_to_assign = [
-            group for group in player_groups if player_role in TeamComposition.remaining_roles_required(group.players)
+            group for group in player_groups if player_role in team_composition.remaining_roles_required(group.players)
         ]
         logger.debug(f"Assigning {player_role.name} for groups {groups_to_assign}")
 
         player_pool_to_assign = PlayerNamePool(get_players_for_role(player_pool, player_role))
         assigned_players = _assign_players_with_exclusion_set(
-            groups_to_assign,
-            groups_to_skip,
-            player_pool_to_assign,
-            player_role,
-            exclusion_set,
-            role_averages,
-            use_uniform_sampling,
+            groups_to_assign=groups_to_assign,
+            groups_to_skip=groups_to_skip,
+            possible_players=player_pool_to_assign,
+            role=player_role,
+            exclusion_set=exclusion_set,
+            role_averages=role_averages,
+            use_uniform_sampling=use_uniform_sampling,
+            team_composition=team_composition,
         )
         player_pool = player_pool.remove_subset_from(assigned_players)
 
     if player_pool.size > 0:
         raise ValueError(f"Some people were not assigned! like: {[p.name for p in player_pool.players]}")
 
-    teams = [Team(group.players) for group in player_groups]
+    teams = [Team(group.players, team_composition) for group in player_groups]
     return teams

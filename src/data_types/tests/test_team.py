@@ -6,7 +6,14 @@ import pytest
 
 from src.data_types.player import Player, PlayerAssignment, PlayerRole
 from src.data_types.player_pool import PlayerNamePool
-from src.data_types.team import Team, TeamComposition, read_teams_from_csv, write_teams_to_csv
+from src.data_types.team import (
+    SpeedTeamComposition,
+    Team,
+    TeamComposition,
+    ThreeFlexTeamComposition,
+    read_teams_from_csv,
+    write_teams_to_csv,
+)
 from src.data_types.tests.mock_data import get_fake_ranking, get_player_assignments
 
 
@@ -36,67 +43,110 @@ def _get_team_list() -> list[list[Team]]:
         ["K", "L", "M"], [PlayerRole.QUEEN, PlayerRole.OBJECTIVE, PlayerRole.SPEED]
     )
 
+    first_team = Team(first_team_players, team_composition=SpeedTeamComposition)
+    second_team = Team(second_team_players, team_composition=SpeedTeamComposition)
+
+    flex_team_players = get_player_assignments(
+        ["N", "O", "P", "Q"], [PlayerRole.QUEEN, PlayerRole.FLEX, PlayerRole.FLEX, PlayerRole.OBJECTIVE]
+    )
+    flex_team = Team(flex_team_players, team_composition=ThreeFlexTeamComposition)
+
     return [
-        [Team(first_team_players), Team(second_team_players)],
+        [first_team, second_team],
         # First team has no fills
-        [Team(first_team_players + [fill_player]), Team(second_team_players)],
-        # Second team has no fills
-        [Team(first_team_players), Team(second_team_players + [fill_player])],
+        [Team(first_team_players + [fill_player], team_composition=SpeedTeamComposition), second_team],
+        [first_team, Team(second_team_players + [fill_player], team_composition=SpeedTeamComposition)],
         # Both have no fill
         [
-            Team(first_team_players + [fill_player]),
-            Team(second_team_players + [other_fill_player]),
+            Team(first_team_players + [fill_player], team_composition=SpeedTeamComposition),
+            Team(second_team_players + [other_fill_player], team_composition=SpeedTeamComposition),
         ],
         # Now we have three teams
         [
-            Team(first_team_players),
-            Team(second_team_players),
-            Team(third_team_players + [fill_player, other_fill_player]),
+            first_team,
+            second_team,
+            Team(third_team_players + [fill_player, other_fill_player], team_composition=SpeedTeamComposition),
+        ],
+        # Mix teams
+        [first_team, flex_team],
+        [
+            Team(flex_team_players + [fill_player], team_composition=ThreeFlexTeamComposition),
         ],
     ]
 
 
-def test_team_composition() -> None:
+def test_three_flex_team_composition() -> None:
     team = get_player_assignments(["A", "B", "C"], [PlayerRole.QUEEN, PlayerRole.FLEX, PlayerRole.FLEX])
     with pytest.raises(ValueError):
-        TeamComposition.validate_team(team)
+        ThreeFlexTeamComposition.validate_team(team)
+    team.append(Player("D", ranking=get_fake_ranking()).to_assignment(PlayerRole.OBJECTIVE))
+    # This should be valid since we have 3 flex players and 1 objective
+    ThreeFlexTeamComposition.validate_team(team)
+
+    team.append(
+        Player("E", ranking=get_fake_ranking()).to_assignment(PlayerRole.FLEX),
+    )
+    # This should be valid since we have 3 flex players and 1 objective
+    ThreeFlexTeamComposition.validate_team(team)
+
+    team = get_player_assignments(
+        ["A", "B", "C", "D"], [PlayerRole.QUEEN, PlayerRole.FLEX, PlayerRole.OBJECTIVE, PlayerRole.SPEED]
+    )
+    # This is valid for speed team composition, but not for three flex
+    with pytest.raises(ValueError):
+        ThreeFlexTeamComposition.validate_team(team)
+
+
+def test_speed_team_composition() -> None:
+    team = get_player_assignments(["A", "B", "C"], [PlayerRole.QUEEN, PlayerRole.FLEX, PlayerRole.FLEX])
+    with pytest.raises(ValueError):
+        SpeedTeamComposition.validate_team(team)
     team.append(
         Player("D", ranking=get_fake_ranking()).to_assignment(PlayerRole.FLEX),
     )
     with pytest.raises(ValueError):
-        TeamComposition.validate_team(team)
+        SpeedTeamComposition.validate_team(team)
     team = get_player_assignments(["A", "B"], [PlayerRole.QUEEN, PlayerRole.QUEEN])
     with pytest.raises(ValueError):
-        TeamComposition.validate_team(team)
+        SpeedTeamComposition.validate_team(team)
 
     team = get_player_assignments(
         ["A", "B", "C", "D"], [PlayerRole.QUEEN, PlayerRole.FLEX, PlayerRole.FLEX, PlayerRole.SPEED]
     )
     with pytest.raises(ValueError):
-        TeamComposition.validate_team(team)
+        SpeedTeamComposition.validate_team(team)
     # Now this should succeed since we allow flex fills
     team = get_player_assignments(
         ["A", "B", "C", "D"], [PlayerRole.QUEEN, PlayerRole.FLEX, PlayerRole.OBJECTIVE, PlayerRole.SPEED]
     )
-    TeamComposition.validate_team(team)
+    SpeedTeamComposition.validate_team(team)
     # And if we add the final FLEX player
     team.append(Player("E", ranking=get_fake_ranking()).to_assignment(PlayerRole.FLEX))
-    TeamComposition.validate_team(team)
+    SpeedTeamComposition.validate_team(team)
     # And if we add one more, it is now too many players
     team.append(Player("F", ranking=get_fake_ranking()).to_assignment(PlayerRole.FLEX))
     with pytest.raises(ValueError):
-        TeamComposition.validate_team(team)
+        SpeedTeamComposition.validate_team(team)
 
 
 def test_remaining_roles_remaining() -> None:
     team = get_player_assignments(["A", "B"], [PlayerRole.QUEEN, PlayerRole.FLEX])
-    remaining_roles = TeamComposition.remaining_roles_required(team)
+    remaining_roles = SpeedTeamComposition.remaining_roles_required(team)
     counts: Dict[PlayerRole, int] = defaultdict(int)
     for role in remaining_roles:
         counts[role] += 1
     assert counts == {
         PlayerRole.FLEX: 1,
         PlayerRole.SPEED: 1,
+        PlayerRole.OBJECTIVE: 1,
+    }
+
+    remaining_roles = ThreeFlexTeamComposition.remaining_roles_required(team)
+    counts = defaultdict(int)
+    for role in remaining_roles:
+        counts[role] += 1
+    assert counts == {
+        PlayerRole.FLEX: 2,
         PlayerRole.OBJECTIVE: 1,
     }
 
@@ -108,20 +158,35 @@ def test_csv_serialization() -> None:
     )
     player_pool = PlayerNamePool([a.player for a in all_assignments])
     # Define a team with A,B,D,E, aka requiring a fill for a FLEX player.
-    team = Team([p for p in all_assignments if p.name in {"A", "B", "D", "E"}])
+    team = Team([p for p in all_assignments if p.name in {"A", "B", "D", "E"}], team_composition=SpeedTeamComposition)
 
     new_team = Team.from_csv(team.to_csv(), player_pool)
     _assert_teams_equal(team, new_team)
 
+    # Three flex team with fill also works.
+    team = Team(
+        [p for p in all_assignments if p.name in {"A", "B", "C", "E"}], team_composition=ThreeFlexTeamComposition
+    )
+    new_team = Team.from_csv(team.to_csv(), player_pool)
+    _assert_teams_equal(team, new_team)
+
+    # Three flex with no fill works.
+    team = Team(
+        get_player_assignments(["A", "B", "C", "D", "E"], ThreeFlexTeamComposition.get_roles()),
+        team_composition=ThreeFlexTeamComposition,
+    )
+    new_team = Team.from_csv(team.to_csv(), player_pool)
+    _assert_teams_equal(team, new_team)
+
     # Now add the last FLEX player.
-    team = Team(all_assignments)
+    team = Team(all_assignments, team_composition=SpeedTeamComposition)
     new_team = Team.from_csv(team.to_csv(), player_pool)
     _assert_teams_equal(team, new_team)
 
     invalid_player_list = [p for p in all_assignments if p.name in {"A", "B", "D", "E"}]
     # This player is not in the all_players_dict, so it should fail.
     invalid_player_list.append(Player("F", ranking=get_fake_ranking()).to_assignment(PlayerRole.FLEX))
-    team = Team(invalid_player_list)
+    team = Team(invalid_player_list, team_composition=SpeedTeamComposition)
     csv_list = team.to_csv()
     with pytest.raises(ValueError):
         Team.from_csv(csv_list, player_pool)
@@ -145,7 +210,10 @@ def test_multi_team_csv_duplicate_player(tmpdir: py.path.local) -> None:
     second_team = [first_team[0]] + get_player_assignments(
         ["E", "F", "G"], [PlayerRole.FLEX, PlayerRole.OBJECTIVE, PlayerRole.SPEED]
     )
-    team_list = [Team(first_team), Team(second_team)]
+    team_list = [
+        Team(first_team, team_composition=SpeedTeamComposition),
+        Team(second_team, team_composition=SpeedTeamComposition),
+    ]
 
     output_path = f"{tmpdir}/test.csv"
     all_players: list[PlayerAssignment] = [p for p in first_team + second_team[1:]]
@@ -155,17 +223,21 @@ def test_multi_team_csv_duplicate_player(tmpdir: py.path.local) -> None:
         read_teams_from_csv(output_path, PlayerNamePool([p.player for p in all_players]))
 
 
-def test_is_num_assignments_valid() -> None:
+def test_is_speed_num_assignments_valid() -> None:
     # For speed, we require at least the number of players.
-    assert TeamComposition.is_num_assignments_valid(PlayerRole.SPEED, 1, 1)
-    assert not TeamComposition.is_num_assignments_valid(PlayerRole.SPEED, 5, 4)
-    assert TeamComposition.is_num_assignments_valid(PlayerRole.SPEED, 5, 6)
+    assert SpeedTeamComposition.is_num_assignments_valid(PlayerRole.SPEED, 1, 1)
+    assert not SpeedTeamComposition.is_num_assignments_valid(PlayerRole.SPEED, 5, 4)
+    assert SpeedTeamComposition.is_num_assignments_valid(PlayerRole.SPEED, 5, 6)
+
+
+@pytest.mark.parametrize("team_composition", [SpeedTeamComposition, ThreeFlexTeamComposition])
+def test_is_num_assignments_valid(team_composition: type[TeamComposition]) -> None:
     # For flex, we can have fills.
-    assert TeamComposition.is_num_assignments_valid(PlayerRole.FLEX, 1, 1)
-    assert TeamComposition.is_num_assignments_valid(PlayerRole.FLEX, 5, 4)
-    assert TeamComposition.is_num_assignments_valid(PlayerRole.FLEX, 5, 6)
+    assert team_composition.is_num_assignments_valid(PlayerRole.FLEX, 1, 1)
+    assert team_composition.is_num_assignments_valid(PlayerRole.FLEX, 5, 4)
+    assert team_composition.is_num_assignments_valid(PlayerRole.FLEX, 5, 6)
     # For queen/objective, we cannot have fills.
     for role in [PlayerRole.QUEEN, PlayerRole.OBJECTIVE]:
-        assert TeamComposition.is_num_assignments_valid(role, 1, 1)
-        assert not TeamComposition.is_num_assignments_valid(role, 5, 4)
-        assert not TeamComposition.is_num_assignments_valid(role, 5, 6)
+        assert team_composition.is_num_assignments_valid(role, 1, 1)
+        assert not team_composition.is_num_assignments_valid(role, 5, 4)
+        assert not team_composition.is_num_assignments_valid(role, 5, 6)

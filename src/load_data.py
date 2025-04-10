@@ -30,6 +30,7 @@ def load_data(csv_path: str) -> PlayerNamePool[Player]:
         reader = csv.DictReader(csvfile)
         for row in reader:
             ranking_dict = {role: row[key] for key, role in column_name_to_role.items()}
+
             # convert values to floats
             float_ranking_dict = {key: _try_to_float(value) for key, value in ranking_dict.items()}
 
@@ -63,13 +64,15 @@ def _load_assigned_speed(csv_path: str, player_pool: PlayerNamePool[Player]) -> 
 
 
 def load_attendance(
-    csv_path: str, player_pool: PlayerNamePool[Player], scores_csv_path: str | None = None
+    csv_path: str, player_pool: PlayerNamePool[Player], assign_speed: bool, scores_csv_path: str | None = None
 ) -> PlayerNamePool[PlayerAssignment]:
     """Given a csv, and all possible players with ranking data, return the players who are in attendance."""
     player_list = []
     assigned_speed = None
-    if scores_csv_path:
+    if assign_speed and scores_csv_path:
         assigned_speed = _load_assigned_speed(scores_csv_path, player_pool)
+    elif not assign_speed:
+        print("Speed assignment is not enabled, so we will not load the scores csv.")
 
     with open(csv_path, newline="") as csvfile:
         reader = csv.reader(csvfile)
@@ -128,33 +131,28 @@ def load_exclusion_set(csv_path: str, player_pool: PlayerNamePool[Player]) -> li
     return exclusion_set
 
 
-def load_inclusion_set(csv_path: str, player_pool: PlayerNamePool[Player]) -> List[List[PlayerAssignment]]:
+def load_inclusion_set(
+    csv_path: str, player_pool: PlayerNamePool[PlayerAssignment], team_composition: type[TeamComposition]
+) -> List[List[PlayerAssignment]]:
     inclusion_set = []
 
-    role_to_csv_title = {
-        PlayerRole.QUEEN: "Queen",
-        PlayerRole.SPEED: "Speed Warrior",
-        PlayerRole.OBJECTIVE: "Objective",
-        PlayerRole.FLEX: "Flex",
-    }
-    role_to_ind = {}
     with open(csv_path, newline="") as csvfile:
         reader = csv.reader(csvfile)
-        field_names = next(reader)
-        for role, title in role_to_csv_title.items():
-            role_to_ind[role] = [i for i, name in enumerate(field_names) if name == title]
         for row in reader:
             team = []
-            for role, ind_list in role_to_ind.items():
-                for ind in ind_list:
-                    name = row[ind]
-                    if not name:
-                        continue
-                    if not player_pool.contains_name(name):
-                        raise ValueError(f"Player {name} in inclusion set, but not found in player pool")
-                    player = player_pool.get_player(name)
-                    team.append(PlayerAssignment(player, assigned_role=role))
+            for i, name in enumerate(row):
+                if i == 0:
+                    # The first entry is the team name, which we ignore
+                    continue
+                if not name:
+                    continue
+                if not player_pool.contains_name(name):
+                    raise ValueError(
+                        f"Player {name} in inclusion set, but not found in player pool - see tests/data/inclusion_set.csv for valid format."
+                    )
+                player = player_pool.get_player(name)
+                team.append(player)
             if team:
-                TeamComposition.validate_team(team, allow_missing=True)
+                team_composition.validate_team(team, allow_missing=True)
                 inclusion_set.append(team)
     return inclusion_set
