@@ -25,6 +25,7 @@ To do a player assignment, after setting up and entering the virtualenv, enter t
 ```commandline
 python main.py assign -f data/test_data.csv
 ```
+foo
 
 Note that if you want to use a team composition with 3 flex warriors instead of the default, which is 2 flex warriors
 and 1 speed warrior, pass in `--use-flex-role-for-speed` like below
