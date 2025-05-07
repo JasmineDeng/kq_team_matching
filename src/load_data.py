@@ -116,7 +116,7 @@ def load_exclusion_set(csv_path: str, player_pool: PlayerNamePool[Player]) -> li
         reader = csv.reader(csvfile)
         next(reader)  # skip the header
         for row in reader:
-            if len(row) > 3 and row[3] and datetime.strptime(row[3], "%Y-%m-%d") >= datetime.now():
+            if len(row) > 3 and row[3] and datetime.strptime(row[3], "%Y-%m-%d") <= datetime.now():
                 continue
 
             requestor = player_pool.get_player(row[0])
